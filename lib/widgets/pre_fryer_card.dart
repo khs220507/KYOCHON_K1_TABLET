@@ -1,16 +1,37 @@
 import 'package:flutter/material.dart';
+import '../models/fryer_state.dart';
 
 class PreFryerCard extends StatelessWidget {
   final String title;
   final double scale;
   final double width;
+  final FryerState? fryerState;
+  final bool isBasket1Empty;
 
   const PreFryerCard({
     super.key,
     required this.title,
     required this.scale,
     required this.width,
+    this.fryerState,
+    this.isBasket1Empty = true,
   });
+
+  String _formatTime(int seconds) {
+    final minutes = seconds ~/ 60;
+    final secs = seconds % 60;
+    return '${minutes.toString().padLeft(2, '0')}:${secs.toString().padLeft(2, '0')}';
+  }
+
+  int _calculateCookProgress() {
+    if (fryerState?.selectedMenu == null || fryerState!.cookRemainingTime == 0) {
+      return 0;
+    }
+    final totalCookTime = fryerState!.selectedMenu!.cookTime;
+    final remainingTime = fryerState!.cookRemainingTime;
+    final progress = ((totalCookTime - remainingTime) / totalCookTime * 100).round();
+    return progress.clamp(0, 100);
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -40,16 +61,49 @@ class PreFryerCard extends StatelessWidget {
           SizedBox(height: 5 * scale),
           // 비어있음 또는 메뉴 정보
           Text(
-            '비어있음',
+            fryerState?.selectedMenu?.name ?? '비어있음',
             style: TextStyle(
               fontSize: 50 * scale,
               fontWeight: FontWeight.bold,
-              color: Colors.black,
+              color: (fryerState?.isEmpty ?? true) ? Colors.black : Colors.black,
             ),
           ),
           const Spacer(),
-          // 하단 정보 (조리 중일 때 표시)
-          // TODO: 조리 상태에 따라 퍼센트, 시간 표시
+          // 이동 대기중 메시지 (초벌 완료 + 1번 바스켓 비어있음) - 중간에 표시
+          if (title == '수동 조리 튀김기' &&
+              fryerState?.selectedMenu != null &&
+              !fryerState!.isPreFrying &&
+              fryerState!.preFryRemainingTime == 0 &&
+              isBasket1Empty)
+            Text(
+              '이동 대기중',
+              style: TextStyle(
+                fontSize: 50 * scale,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue,
+              ),
+            ),
+          const Spacer(),
+          // 조리 진행률 (퍼센트)
+          if (fryerState?.selectedMenu != null && fryerState!.isCooking)
+            Text(
+              '${_calculateCookProgress()}%',
+              style: TextStyle(
+                fontSize: 60 * scale,
+                fontWeight: FontWeight.bold,
+                color: Colors.red,
+              ),
+            ),
+          // 타이머 정보
+          if (fryerState?.selectedMenu != null)
+            Text(
+              '초벌 : ${_formatTime(fryerState!.preFryRemainingTime)} / 조리 : ${_formatTime(fryerState!.cookRemainingTime)}',
+              style: TextStyle(
+                fontSize: 40 * scale,
+                fontWeight: FontWeight.bold,
+                color: Colors.black,
+              ),
+            ),
         ],
       ),
     );

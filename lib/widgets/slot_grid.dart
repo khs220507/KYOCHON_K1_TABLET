@@ -1,10 +1,16 @@
 import 'package:flutter/material.dart';
 import 'slot_card.dart';
+import '../models/basket_state.dart';
 
 class SlotGrid extends StatelessWidget {
   final double scale;
+  final List<BasketState> basketStates;
 
-  const SlotGrid({super.key, required this.scale});
+  const SlotGrid({
+    super.key,
+    required this.scale,
+    required this.basketStates,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -58,7 +64,7 @@ class SlotGrid extends StatelessWidget {
             ],
           ),
           SizedBox(height: 10 * scale),
-          // 슬롯 그리드
+          // 슬롯 그리드 (각 바스켓과 버튼들)
           Row(
             mainAxisSize: MainAxisSize.min,
             children: List.generate(
@@ -66,11 +72,20 @@ class SlotGrid extends StatelessWidget {
               (index) => Expanded(
                 child: Padding(
                   padding: EdgeInsets.only(
-                    right: index < slotCount - 1 ? 10 * scale : 0,
+                    right: index < slotCount - 1 ? 20 * scale : 0,
                   ),
-                  child: SlotCard(
-                    slotNumber: index,
-                    scale: scale,
+                  child: Column(
+                    children: [
+                      // 바스켓 카드
+                      SlotCard(
+                        slotNumber: index,
+                        scale: scale,
+                        basketState: basketStates[index],
+                      ),
+                      SizedBox(height: 10 * scale),
+                      // 각 바스켓 아래 버튼들 (세로로)
+                      _buildBasketButtons(index, scale),
+                    ],
                   ),
                 ),
               ),
@@ -78,6 +93,102 @@ class SlotGrid extends StatelessWidget {
           ),
         ],
       ),
+    );
+  }
+
+  Widget _buildBasketButtons(int basketIndex, double scale) {
+    return Column(
+      children: [
+        // 튀김기 청소 버튼
+        Container(
+          width: double.infinity,
+          height: 80 * scale,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE5E5E5),
+            borderRadius: BorderRadius.circular(20 * scale),
+            border: Border.all(color: Colors.black, width: 1),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                // TODO: ${basketIndex + 1}번 바스켓 튀김기 청소 동작
+              },
+              borderRadius: BorderRadius.circular(20 * scale),
+              child: Center(
+                child: Text(
+                  '튀김기 청소',
+                  style: TextStyle(
+                    fontSize: 35 * scale,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: 10 * scale),
+        // 바스켓 흔들기 버튼
+        Container(
+          width: double.infinity,
+          height: 80 * scale,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE5E5E5),
+            borderRadius: BorderRadius.circular(20 * scale),
+            border: Border.all(color: Colors.black, width: 1),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                // TODO: ${basketIndex + 1}번 바스켓 흔들기 동작
+              },
+              borderRadius: BorderRadius.circular(20 * scale),
+              child: Center(
+                child: Text(
+                  '바스켓 흔들기',
+                  style: TextStyle(
+                    fontSize: 35 * scale,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+        SizedBox(height: 10 * scale),
+        // 오버쿡 / 즉시 완료 버튼
+        Container(
+          width: double.infinity,
+          height: 80 * scale,
+          decoration: BoxDecoration(
+            color: const Color(0xFFE5E5E5),
+            borderRadius: BorderRadius.circular(20 * scale),
+            border: Border.all(color: Colors.black, width: 1),
+          ),
+          child: Material(
+            color: Colors.transparent,
+            child: InkWell(
+              onTap: () {
+                // TODO: ${basketIndex + 1}번 바스켓 오버쿡 / 즉시 완료 동작
+              },
+              borderRadius: BorderRadius.circular(20 * scale),
+              child: Center(
+                child: Text(
+                  '오버쿡 / 즉시 완료',
+                  style: TextStyle(
+                    fontSize: 35 * scale,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ),
+      ],
     );
   }
 }

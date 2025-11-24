@@ -1,10 +1,22 @@
 import 'package:flutter/material.dart';
 import 'pre_fryer_card.dart';
+import 'menu_selection_dialog.dart';
+import '../config/menu_config.dart';
+import '../models/fryer_state.dart';
 
 class StatusPanel extends StatelessWidget {
   final double scale;
+  final Function(MenuConfig)? onMenuSelected;
+  final FryerState? manualFryerState;
+  final bool isBasket1Empty;
 
-  const StatusPanel({super.key, required this.scale});
+  const StatusPanel({
+    super.key,
+    required this.scale,
+    this.onMenuSelected,
+    this.manualFryerState,
+    this.isBasket1Empty = true,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -38,11 +50,88 @@ class StatusPanel extends StatelessWidget {
                     scale: scale,
                     width: 350 * scale,
                   ),
-                  SizedBox(width: 2 * scale),
+                  SizedBox(width: 20 * scale),
                   PreFryerCard(
                     title: '수동 조리 튀김기',
                     scale: scale,
                     width: 550 * scale,
+                    fryerState: manualFryerState,
+                    isBasket1Empty: isBasket1Empty,
+                  ),
+                  SizedBox(width: 20 * scale),
+                  // 치킨 버튼과 사이드 버튼
+                  Column(
+                    children: [
+                      // 치킨 버튼
+                      Container(
+                        width: 280 * scale,
+                        height: 240 * scale,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE5E5E5),
+                          borderRadius: BorderRadius.circular(20 * scale),
+                          border: Border.all(color: Colors.black, width: 1),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => MenuSelectionDialog(
+                                  scale: scale,
+                                  onMenuSelected: (MenuConfig menu) {
+                                    if (onMenuSelected != null) {
+                                      onMenuSelected!(menu);
+                                    }
+                                  },
+                                ),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(20 * scale),
+                            child: Center(
+                              child: Text(
+                                '치킨',
+                                style: TextStyle(
+                                  fontSize: 60 * scale,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(height: 20 * scale),
+                      // 사이드 버튼
+                      Container(
+                        width: 280 * scale,
+                        height: 240 * scale,
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFDDDCDC),
+                          borderRadius: BorderRadius.circular(20 * scale),
+                          border: Border.all(color: Colors.black, width: 1),
+                        ),
+                        child: Material(
+                          color: Colors.transparent,
+                          child: InkWell(
+                            onTap: () {
+                              // TODO: 사이드 버튼 동작
+                            },
+                            borderRadius: BorderRadius.circular(20 * scale),
+                            child: Center(
+                              child: Text(
+                                '사이드',
+                                style: TextStyle(
+                                  fontSize: 60 * scale,
+                                  fontWeight: FontWeight.bold,
+                                  color: Colors.black,
+                                ),
+                              ),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -162,38 +251,65 @@ class StatusPanel extends StatelessWidget {
         shape: BoxShape.circle,
         gradient: RadialGradient(
           colors: [
-            ledColor.withOpacity(0.9),
-            ledColor.withOpacity(0.7),
+            ledColor,
+            ledColor.withOpacity(0.8),
+            ledColor.withOpacity(0.6),
           ],
-          stops: const [0.0, 1.0],
+          stops: const [0.0, 0.5, 1.0],
         ),
         boxShadow: [
-          // 부드러운 발광 효과
+          // 미묘한 발광 효과 (번짐 최소화)
           BoxShadow(
-            color: ledColor.withOpacity(0.4),
-            blurRadius: 8 * scale,
-            spreadRadius: 2 * scale,
-          ),
-          // 깊이감을 주는 그림자
-          BoxShadow(
-            color: Colors.black.withOpacity(0.3),
+            color: ledColor.withOpacity(0.3),
             blurRadius: 4 * scale,
+            spreadRadius: 1 * scale,
+          ),
+          // 입체감을 주는 그림자
+          BoxShadow(
+            color: Colors.black.withOpacity(0.4),
+            blurRadius: 3 * scale,
             offset: Offset(0, 2 * scale),
+          ),
+          // 내부 그림자 효과
+          BoxShadow(
+            color: Colors.black.withOpacity(0.2),
+            blurRadius: 1 * scale,
+            offset: Offset(0, 1 * scale),
           ),
         ],
       ),
-      child: Container(
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: LinearGradient(
-            begin: Alignment.topLeft,
-            end: Alignment.bottomRight,
-            colors: [
-              Colors.white.withOpacity(0.2),
-              Colors.transparent,
-            ],
+      child: Stack(
+        children: [
+          // 상단 왼쪽 하이라이트
+          Positioned(
+            top: 6 * scale,
+            left: 6 * scale,
+            child: Container(
+              width: 12 * scale,
+              height: 12 * scale,
+              decoration: BoxDecoration(
+                shape: BoxShape.circle,
+                color: Colors.white.withOpacity(0.5),
+              ),
+            ),
           ),
-        ),
+          // 그라데이션 오버레이
+          Container(
+            decoration: BoxDecoration(
+              shape: BoxShape.circle,
+              gradient: LinearGradient(
+                begin: Alignment.topLeft,
+                end: Alignment.bottomRight,
+                colors: [
+                  Colors.white.withOpacity(0.3),
+                  Colors.transparent,
+                  Colors.black.withOpacity(0.1),
+                ],
+                stops: const [0.0, 0.5, 1.0],
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }

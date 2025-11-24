@@ -55,10 +55,20 @@ class _MainScreenState extends State<MainScreen> {
       color: Colors.white,
       child: const Center(child: Text('로그 데이터')),
     ),
-    // TODO: 주문 페이지
+    // TODO: 예비 1 페이지
     Container(
       color: Colors.white,
-      child: const Center(child: Text('주문')),
+      child: const Center(child: Text('예비 1')),
+    ),
+    // TODO: 예비 2 페이지
+    Container(
+      color: Colors.white,
+      child: const Center(child: Text('예비 2')),
+    ),
+    // TODO: 예비 3 페이지
+    Container(
+      color: Colors.white,
+      child: const Center(child: Text('예비 3')),
     ),
   ];
 
@@ -114,6 +124,8 @@ class _MainScreenState extends State<MainScreen> {
           _buildNavButton('예비 1', 3, scale),
           _buildNavButton('예비 2', 4, scale),
           _buildNavButton('예비 3', 5, scale),
+          _buildActionButton('비상정지', scale, isEmergency: true),
+          _buildActionButton('프로그램종료', scale, isExit: true),
         ],
       ),
     );
@@ -136,6 +148,49 @@ class _MainScreenState extends State<MainScreen> {
           decoration: BoxDecoration(
             color: isSelected
                 ? const Color(0xFF888888)
+                : const Color(0xFFE5E5E5),
+            borderRadius: BorderRadius.circular(16 * scale),
+          ),
+          child: Center(
+            child: Text(
+              text,
+              style: TextStyle(
+                fontSize: 35 * scale,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActionButton(
+    String text,
+    double scale, {
+    bool isEmergency = false,
+    bool isExit = false,
+  }) {
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          if (isEmergency) {
+            // TODO: 비상정지 동작
+            print('비상정지');
+          } else if (isExit) {
+            // TODO: 프로그램 종료 동작
+            print('프로그램 종료');
+          }
+        },
+        child: Container(
+          height: 75 * scale,
+          margin: EdgeInsets.symmetric(horizontal: 7.5 * scale),
+          decoration: BoxDecoration(
+            color: isEmergency
+                ? Colors.red
+                : isExit
+                ? Colors.orange
                 : const Color(0xFFE5E5E5),
             borderRadius: BorderRadius.circular(16 * scale),
           ),
