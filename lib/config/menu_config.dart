@@ -5,30 +5,33 @@ class MenuConfig {
   final String name;
   final int preFryTime; // 초벌 시간 (초) - 초벌만 하는 시간
   final int cookTime; // 조리 시간 (초) - 초벌 시간을 포함한 전체 조리 시간
-  final int shakeTime; // 흔들기 시간 (초) - 흔들기를 하는 시간
   final int shapeTime; // 성형 시간 (초) - 성형을 하는 시간
 
   const MenuConfig({
     required this.name,
     required this.preFryTime,
     required this.cookTime,
-    required this.shakeTime,
     required this.shapeTime,
   });
 
-  // JSON에서 생성
-  factory MenuConfig.fromJson(Map<String, dynamic> json) {
+  // JSON에서 생성 (전역 shakeTimePercent 사용)
+  factory MenuConfig.fromJson(Map<String, dynamic> json, double globalShakeTimePercent) {
     return MenuConfig(
       name: json['name'] as String,
       preFryTime: json['preFryTime'] as int,
       cookTime: json['cookTime'] as int,
-      shakeTime: json['shakeTime'] as int,
       shapeTime: json['shapeTime'] as int,
     );
   }
 
+  // 전역 쉐이킹 시간 퍼센트 가져오기
+  double get shakeTimePercent => ConfigService.getGlobalShakeTimePercent();
+
   // 초벌 후 추가 조리 시간 계산 (조리 시간 - 초벌 시간)
   int get additionalCookTime => cookTime - preFryTime;
+  
+  // 흔들기 시간 계산 (총 조리시간의 퍼센트)
+  int get shakeTime => (cookTime * shakeTimePercent / 100).round();
 }
 
 // 메뉴 설정 데이터 저장소

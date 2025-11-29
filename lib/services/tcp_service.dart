@@ -206,11 +206,21 @@ class TcpService {
       }
     }
 
-    // 큐에 명령어 추가 (RUNNING 상태와 관계없이 항상 추가)
-    _commandQueue.add(message);
+    // 우선순위에 따라 명령어를 큐에 삽입
+    _insertCommandByPriority(message);
+    
+    final operatingMode = ConfigService.getOperatingMode();
+    final priority = _getCommandPriority(message);
+    
     if (_isRunning) {
       print('[$timestamp] 📋 명령어 큐에 추가 (RUNNING 상태이지만 큐에 추가): $message');
+      print('  - 운영 모드: $operatingMode');
+      print('  - 우선순위: $priority');
       print('  ⏸️  실제 전송은 RUNNING 상태가 해제된 후 진행됩니다.');
+    } else {
+      print('[$timestamp] 📋 명령어 큐에 추가: $message');
+      print('  - 운영 모드: $operatingMode');
+      print('  - 우선순위: $priority');
     }
     _printQueueStatus('명령어 추가', message);
 
@@ -228,6 +238,101 @@ class TcpService {
 
     // 큐에 추가 완료
     return true;
+  }
+
+  /// 이머전시 명령어를 큐에 추가 (E_OUTPUT은 최우선, E_OUTPUT들 사이에서는 먼저 추가된 것이 먼저 처리)
+  Future<bool> sendEmergencyMessage(String message) async {
+    final timestamp = DateTime.now().toString().substring(11, 19);
+
+    // E_OUTPUT 명령어는 최우선순위로 추가
+    _insertCommandByPriority(message);
+    
+    final priority = _getCommandPriority(message);
+    print('[$timestamp] 🚨 이머전시 명령어 큐에 추가: $message');
+    print('  - 우선순위: $priority (최우선)');
+    print('  - E_OUTPUT들 사이에서는 먼저 추가된 것이 먼저 처리됨');
+    
+    _printQueueStatus('이머전시 명령어 추가', message);
+
+    // 큐 업데이트 알림 (안전하게)
+    if (!_queueUpdateController.isClosed) {
+      _queueUpdateController.add(_commandQueue.length);
+    }
+
+    // 큐 처리 시작 (RUNNING 상태가 아니면)
+    if (!_isRunning) {
+      _processQueue();
+    } else {
+      print('[$timestamp] ⏸️  RUNNING 상태: 큐 처리는 END 메시지 수신 후 재개됩니다.');
+    }
+
+    return true;
+  }
+
+  /// 명령어 우선순위 계산
+  /// 조리시간 준수: INPUT(1) -> OUTPUT(2) -> MOVE(3) -> SHAPING(4) -> CLEAN(5)
+  /// 생산량 위주: E_OUTPUT(0) -> INPUT(1) -> MOVE(2) -> OUTPUT(3) -> SHAPING(4) -> CLEAN(5)
+  int _getCommandPriority(String command) {
+    final upperCmd = command.toUpperCase();
+    final isProduction = ConfigService.isProductionMode();
+    
+    // E_OUTPUT은 항상 최우선 (생산량 위주 모드에서만 사용)
+    if (upperCmd.startsWith('E_OUTPUT_')) {
+      return 0;
+    }
+    
+    if (isProduction) {
+      // 생산량 위주: INPUT(1) -> MOVE(2) -> OUTPUT(3) -> SHAPING(4) -> CLEAN(5)
+      if (upperCmd.startsWith('INPUT_')) return 1;
+      if (upperCmd.startsWith('MOVE_')) return 2;
+      if (upperCmd.startsWith('OUTPUT_')) return 3;
+      if (upperCmd.startsWith('SHAPING_')) return 4;
+      if (upperCmd.startsWith('CLEAN_')) return 5;
+    } else {
+      // 조리시간 준수: INPUT(1) -> OUTPUT(2) -> MOVE(3) -> SHAPING(4) -> CLEAN(5)
+      if (upperCmd.startsWith('INPUT_')) return 1;
+      if (upperCmd.startsWith('OUTPUT_')) return 2;
+      if (upperCmd.startsWith('MOVE_')) return 3;
+      if (upperCmd.startsWith('SHAPING_')) return 4;
+      if (upperCmd.startsWith('CLEAN_')) return 5;
+    }
+    
+    // 알 수 없는 명령어는 낮은 우선순위
+    return 99;
+  }
+
+  /// 우선순위에 따라 명령어를 큐에 삽입
+  void _insertCommandByPriority(String message) {
+    final messagePriority = _getCommandPriority(message);
+    
+    // 큐가 비어있으면 그냥 추가
+    if (_commandQueue.isEmpty) {
+      _commandQueue.add(message);
+      return;
+    }
+    
+    // 우선순위에 따라 적절한 위치 찾기
+    int insertIndex = _commandQueue.length;
+    for (int i = 0; i < _commandQueue.length; i++) {
+      final cmd = _commandQueue.elementAt(i);
+      final cmdPriority = _getCommandPriority(cmd);
+      
+      // 같은 우선순위면 먼저 추가된 것이 앞에 (FIFO)
+      if (messagePriority < cmdPriority) {
+        insertIndex = i;
+        break;
+      }
+    }
+    
+    // 적절한 위치에 삽입
+    if (insertIndex == _commandQueue.length) {
+      _commandQueue.add(message);
+    } else {
+      final tempList = _commandQueue.toList();
+      tempList.insert(insertIndex, message);
+      _commandQueue.clear();
+      _commandQueue.addAll(tempList);
+    }
   }
 
   // 명령어 큐 처리 (한 번에 하나만 처리)
@@ -389,6 +494,23 @@ class TcpService {
       final timestamp = DateTime.now().toString().substring(11, 19);
       print('[$timestamp] 🗑️  MOVE 명령어 큐에서 제거: $moveCommand');
       _printQueueStatus('MOVE 명령어 제거', moveCommand);
+      
+      // 큐 업데이트 알림
+      if (!_queueUpdateController.isClosed) {
+        _queueUpdateController.add(_commandQueue.length);
+      }
+    }
+  }
+
+  // 큐에서 특정 OUTPUT 명령어 제거 (E_OUTPUT 생성 시 호출)
+  void removeOutputCommand(int basketIndex) {
+    final outputCommand = 'OUTPUT_$basketIndex';
+    final removed = _commandQueue.remove(outputCommand);
+    
+    if (removed) {
+      final timestamp = DateTime.now().toString().substring(11, 19);
+      print('[$timestamp] 🗑️  OUTPUT 명령어 큐에서 제거: $outputCommand');
+      _printQueueStatus('OUTPUT 명령어 제거', outputCommand);
       
       // 큐 업데이트 알림
       if (!_queueUpdateController.isClosed) {

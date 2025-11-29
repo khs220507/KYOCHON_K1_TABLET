@@ -8,6 +8,7 @@ import '../models/basket_state.dart';
 import '../models/fryer_state.dart';
 import '../config/menu_config.dart';
 import '../services/tcp_service.dart';
+import '../services/config_service.dart';
 
 class HomePage extends StatefulWidget {
   const HomePage({super.key});
@@ -275,22 +276,28 @@ class _HomePageState extends State<HomePage> {
           }
           
           if (basketIndex != null) {
-            // 특정 바스켓의 꺼내기중 상태 해제
+            // 특정 바스켓의 꺼내기중 상태 해제하고 정리중 상태로 변경
             final index = basketIndex; // null 체크 후 로컬 변수로 사용
             setState(() {
-              _basketStates[index] = _basketStates[index].copyWith(isOutputting: false);
+              _basketStates[index] = _basketStates[index].copyWith(
+                isOutputting: false,
+                isInitializing: true,
+              );
             });
-            print('[$timestamp] ✅ OUTPUT_MOTION_END 명령어 수신: ${index + 1}번 바스켓 꺼내기중 해제');
+            print('[$timestamp] ✅ OUTPUT_MOTION_END 명령어 수신: ${index + 1}번 바스켓 정리중');
           } else {
-            // 바스켓 번호가 없으면 모든 바스켓에서 꺼내기중 상태 해제
+            // 바스켓 번호가 없으면 모든 바스켓에서 꺼내기중 상태 해제하고 정리중 상태로 변경
             setState(() {
               for (int i = 0; i < _basketStates.length; i++) {
                 if (_basketStates[i].isOutputting) {
-                  _basketStates[i] = _basketStates[i].copyWith(isOutputting: false);
+                  _basketStates[i] = _basketStates[i].copyWith(
+                    isOutputting: false,
+                    isInitializing: true,
+                  );
                 }
               }
             });
-            print('[$timestamp] ✅ OUTPUT_MOTION_END 명령어 수신: 모든 바스켓 꺼내기중 해제');
+            print('[$timestamp] ✅ OUTPUT_MOTION_END 명령어 수신: 모든 바스켓 정리중');
           }
         } else if (upperLine.contains('OUTPUT_END') || upperLine.contains('OUTPUT END')) {
           // OUTPUT_END_X 명령어: RUNNING 해제 + 해당 슬롯을 비어있음으로 초기화
@@ -316,6 +323,7 @@ class _HomePageState extends State<HomePage> {
               _basketStates[index] = BasketState(
                 basketNumber: index + 1,
                 isOutputting: false,
+                isInitializing: false,
               );
             });
             print('[$timestamp] ✅ OUTPUT_END 명령어 수신: ${index + 1}번 바스켓 비어있음으로 초기화');
@@ -403,13 +411,77 @@ class _HomePageState extends State<HomePage> {
 
             // 조리 시간 감소 (초벌과 동시에 진행)
             bool cookTimeJustFinished = false;
+            bool shouldStartOvercooking = false;
             if (basket.isCooking && basket.cookRemainingTime > 0) {
               newCookTime = basket.cookRemainingTime - 1;
               if (newCookTime == 0) {
                 newIsCooking = false;
                 cookTimeJustFinished = true; // 조리 시간이 방금 끝남
+                shouldStartOvercooking = true; // 오버쿡 모드 시작
               }
               updated = true;
+            }
+            
+            // 오버쿡 시간 증가
+            int newOvercookTime = basket.overcookTime;
+            bool newIsOvercooking = basket.isOvercooking;
+            if (basket.isOvercooking || shouldStartOvercooking) {
+              if (shouldStartOvercooking) {
+                newIsOvercooking = true;
+                newOvercookTime = 0;
+              } else {
+                newOvercookTime = basket.overcookTime + 1;
+              }
+              updated = true;
+              
+              // 오버쿡 퍼센트 체크 및 E_OUTPUT 명령어 추가 (생산량 위주 모드에서만)
+              if (basket.selectedMenu != null && newIsOvercooking) {
+                final totalCookTime = basket.selectedMenu!.cookTime; // 총 조리시간 (초벌 포함)
+                final overcookPercent = ConfigService.getGlobalOvercookTimePercent();
+                final overcookLimit = (totalCookTime * overcookPercent / 100).round();
+                
+                // 생산량 위주 모드에서만 E_OUTPUT 명령어 추가
+                final isProductionMode = ConfigService.isProductionMode();
+                
+                if (newOvercookTime >= overcookLimit && isProductionMode) {
+                  // E_OUTPUT 명령어를 큐 맨 앞에 추가
+                  final basketNumber = i + 1;
+                  final emergencyCommand = 'E_OUTPUT_${i}';
+                  
+                  // 큐에 이미 같은 E_OUTPUT 명령어가 있는지 확인
+                  final queueCommands = _tcpService.queueCommands;
+                  final alreadyInQueue = queueCommands.contains(emergencyCommand);
+                  
+                  if (!alreadyInQueue) {
+                    // 기존 OUTPUT 명령어 제거 (같은 바스켓)
+                    _tcpService.removeOutputCommand(i);
+                    
+                    print('═══════════════════════════════════════════════════════');
+                    print('🚨 오버쿡 한계 도달: E_OUTPUT 명령어 이머전시 추가');
+                    print('  - 바스켓 번호: $basketNumber');
+                    print('  - 메뉴: ${basket.selectedMenu?.name}');
+                    print('  - 총 조리시간: ${totalCookTime}초');
+                    print('  - 오버쿡 퍼센트: ${overcookPercent}%');
+                    print('  - 오버쿡 한계: ${overcookLimit}초');
+                    print('  - 현재 오버쿡 시간: ${newOvercookTime}초');
+                    print('  - 운영 모드: 생산량 위주');
+                    print('  - 기존 OUTPUT_${i} 명령어 제거됨');
+                    print('  - 전송할 명령어: $emergencyCommand');
+                    print('═══════════════════════════════════════════════════════');
+                    
+                    _tcpService.sendEmergencyMessage(emergencyCommand).then((result) {
+                      if (result) {
+                        print('  ✅ E_OUTPUT 명령어 큐 맨 앞에 추가 성공');
+                      } else {
+                        print('  ❌ E_OUTPUT 명령어 큐 추가 실패');
+                      }
+                    });
+                  }
+                } else if (newOvercookTime >= overcookLimit && !isProductionMode) {
+                  // 조리시간 준수 모드에서는 E_OUTPUT을 생성하지 않음
+                  print('  ℹ️  조리시간 준수 모드: E_OUTPUT 명령어 생성 안 함 (오버쿡 시간: ${newOvercookTime}초)');
+                }
+              }
             }
 
             if (updated) {
@@ -418,6 +490,8 @@ class _HomePageState extends State<HomePage> {
                 isCooking: newIsCooking,
                 preFryRemainingTime: newPreFryTime,
                 cookRemainingTime: newCookTime,
+                isOvercooking: newIsOvercooking,
+                overcookTime: newOvercookTime,
               );
               
               // 조리 시간이 끝나면 OUTPUT 명령어 자동 추가 (1~6번 바스켓만, 1번 바스켓은 제외하지 않음)
@@ -717,6 +791,17 @@ class _HomePageState extends State<HomePage> {
         return;
       }
 
+      // 초벌이 끝났는지 확인 (초벌이 끝나야 이동 예정 표시)
+      final basket1 = _basketStates[0];
+      final isPreFryComplete = !basket1.isPreFrying && basket1.preFryRemainingTime == 0;
+      
+      if (!isPreFryComplete) {
+        print('🔍 MOVE 명령어 체크: 초벌이 아직 진행 중 - 이동 예정 표시 안 함');
+        print('  - isPreFrying: ${basket1.isPreFrying}');
+        print('  - preFryRemainingTime: ${basket1.preFryRemainingTime}');
+        return;
+      }
+
       // 2~6번 바스켓 중 하나라도 비어있는지 확인 (큰 번호부터 찾기)
       bool hasEmptyOtherBasket = false;
       int emptyBasketIndex = -1;
@@ -730,10 +815,11 @@ class _HomePageState extends State<HomePage> {
 
       print('🔍 MOVE 명령어 자동 체크 (통합 전송 지점):');
       print('  - 1번 바스켓 차있음: $isBasket1Full');
+      print('  - 초벌 완료: $isPreFryComplete');
       print('  - 다른 바스켓(2~6번) 중 비어있는 바스켓 있음: $hasEmptyOtherBasket');
 
-      // 1번 바스켓이 차있고 다른 바스켓이 비어있으면 MOVE 명령어 추가
-      if (isBasket1Full && hasEmptyOtherBasket) {
+      // 1번 바스켓이 차있고 초벌이 끝났고 다른 바스켓이 비어있으면 MOVE 명령어 추가 및 이동 예정 표시
+      if (isBasket1Full && isPreFryComplete && hasEmptyOtherBasket) {
         final targetBasketNumber = emptyBasketIndex + 1;
         final moveCommand = 'MOVE_${targetBasketNumber - 1}';
         
@@ -750,6 +836,7 @@ class _HomePageState extends State<HomePage> {
         print('═══════════════════════════════════════════════════════');
         print('🚀 MOVE 명령어 자동 추가 (통합 전송 지점):');
         print('  - 1번 바스켓 차있음: $isBasket1Full');
+        print('  - 초벌 완료: $isPreFryComplete');
         print('  - 다른 바스켓 비어있음: $hasEmptyOtherBasket');
         print('  - 목적지 바스켓 번호: $targetBasketNumber');
         print('  - 전송할 명령어: $moveCommand');
@@ -757,16 +844,27 @@ class _HomePageState extends State<HomePage> {
         print('  - 큐에 이미 같은 명령어 있음: $alreadyInQueue');
         print('═══════════════════════════════════════════════════════');
         
+        // 이동 예정 상태 표시 (초벌이 끝난 시점부터)
+        setState(() {
+          // 1번 바스켓에 이동 예정 정보 설정
+          _basketStates[0] = _basketStates[0].copyWith(pendingMoveTo: targetBasketNumber);
+          // 목적지 바스켓을 예약 상태로 설정
+          _basketStates[emptyBasketIndex] = _basketStates[emptyBasketIndex]
+              .copyWith(isWaiting: true);
+        });
+        
         // sendMessage()에서도 중복 체크를 하므로, 여기서는 로그만 남김
         final result = await _tcpService.sendMessage(moveCommand);
         if (result) {
           print('  ✅ MOVE 명령어 큐 추가 성공');
+          print('  ✅ 이동 예정 상태 표시: 1번 바스켓 → $targetBasketNumber번 바스켓');
         } else {
           print('  ❌ MOVE 명령어 큐 추가 실패 (중복 또는 기타 이유)');
         }
       } else {
         print('  ⚠️  MOVE 명령어 추가 조건 불만족');
         print('    - 1번 바스켓 차있음: $isBasket1Full');
+        print('    - 초벌 완료: $isPreFryComplete');
         print('    - 다른 바스켓 비어있음: $hasEmptyOtherBasket');
       }
     } finally {

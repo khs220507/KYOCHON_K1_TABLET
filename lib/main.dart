@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'pages/home_page.dart';
+import 'pages/settings_page.dart';
 
 // 타겟 해상도 상수 정의 (가로 모드: 2944 x 1840)
 const double targetWidth = 2944.0;
@@ -42,35 +43,43 @@ class MainScreen extends StatefulWidget {
 
 class _MainScreenState extends State<MainScreen> {
   int _currentIndex = 0;
+  List<Widget>? _cachedPages;
+  double? _cachedScale;
 
-  final List<Widget> _pages = [
-    const HomePage(),
-    // TODO: 제어 설정 페이지
-    Container(
-      color: Colors.white,
-      child: const Center(child: Text('제어 설정')),
-    ),
-    // TODO: 로그 데이터 페이지
-    Container(
-      color: Colors.white,
-      child: const Center(child: Text('로그 데이터')),
-    ),
-    // TODO: 예비 1 페이지
-    Container(
-      color: Colors.white,
-      child: const Center(child: Text('예비 1')),
-    ),
-    // TODO: 예비 2 페이지
-    Container(
-      color: Colors.white,
-      child: const Center(child: Text('예비 2')),
-    ),
-    // TODO: 예비 3 페이지
-    Container(
-      color: Colors.white,
-      child: const Center(child: Text('예비 3')),
-    ),
-  ];
+  List<Widget> _buildPages(double scale) {
+    // 스케일이 변경되지 않았고 페이지가 이미 생성되어 있으면 재사용
+    if (_cachedPages != null && _cachedScale == scale) {
+      return _cachedPages!;
+    }
+
+    _cachedScale = scale;
+    _cachedPages = [
+      const HomePage(),
+      SettingsPage(scale: scale),
+      // TODO: 로그 데이터 페이지
+      Container(
+        color: Colors.white,
+        child: const Center(child: Text('로그 데이터')),
+      ),
+      // TODO: 예비 1 페이지
+      Container(
+        color: Colors.white,
+        child: const Center(child: Text('예비 1')),
+      ),
+      // TODO: 예비 2 페이지
+      Container(
+        color: Colors.white,
+        child: const Center(child: Text('예비 2')),
+      ),
+      // TODO: 예비 3 페이지
+      Container(
+        color: Colors.white,
+        child: const Center(child: Text('예비 3')),
+      ),
+    ];
+    
+    return _cachedPages!;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -88,6 +97,8 @@ class _MainScreenState extends State<MainScreen> {
     final heightScale = effectiveHeight / targetHeight;
     final scale = widthScale < heightScale ? widthScale : heightScale;
 
+    final pages = _buildPages(scale);
+
     return MediaQuery(
       data: MediaQuery.of(context).copyWith(
         size: Size(
@@ -96,7 +107,10 @@ class _MainScreenState extends State<MainScreen> {
         ),
       ),
       child: Scaffold(
-        body: _pages[_currentIndex],
+        body: IndexedStack(
+          index: _currentIndex,
+          children: pages,
+        ),
         bottomNavigationBar: _buildBottomNavigationBar(scale),
       ),
     );
@@ -136,11 +150,9 @@ class _MainScreenState extends State<MainScreen> {
     return Expanded(
       child: GestureDetector(
         onTap: () {
-          if (index < _pages.length) {
-            setState(() {
-              _currentIndex = index;
-            });
-          }
+          setState(() {
+            _currentIndex = index;
+          });
         },
         child: Container(
           height: 75 * scale,

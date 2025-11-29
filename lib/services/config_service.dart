@@ -6,6 +6,9 @@ import '../config/menu_config.dart';
 class ConfigService {
   static TcpConfigData? _tcpConfig;
   static List<MenuConfig>? _menuConfigs;
+  static double? _globalShakeTimePercent;
+  static double? _globalOvercookTimePercent;
+  static String? _operatingMode; // "production" 또는 "recipe"
 
   /// TCP 설정 로드
   static Future<TcpConfigData> loadTcpConfig() async {
@@ -38,6 +41,52 @@ class ConfigService {
     }
   }
 
+  /// 전역 쉐이킹 시간 퍼센트 가져오기
+  static double getGlobalShakeTimePercent() {
+    return _globalShakeTimePercent ?? 0.83; // 기본값
+  }
+
+  /// 전역 쉐이킹 시간 퍼센트 설정
+  static void setGlobalShakeTimePercent(double percent) {
+    _globalShakeTimePercent = percent;
+    // 메뉴 캐시 무효화하여 다시 로드 시 새로운 퍼센트 적용
+    _menuConfigs = null;
+  }
+
+  /// 전역 오버쿡 시간 퍼센트 설정
+  static void setGlobalOvercookTimePercent(double percent) {
+    _globalOvercookTimePercent = percent;
+  }
+
+  /// 전역 오버쿡 시간 퍼센트 가져오기
+  static double getGlobalOvercookTimePercent() {
+    return _globalOvercookTimePercent ?? 10.0; // 기본값
+  }
+
+  /// 운영 모드 가져오기 ("production" 또는 "recipe")
+  static String getOperatingMode() {
+    return _operatingMode ?? 'recipe'; // 기본값: 레시피 준수
+  }
+
+  /// 운영 모드 설정
+  static void setOperatingMode(String mode) {
+    if (mode == 'production' || mode == 'recipe') {
+      _operatingMode = mode;
+    } else {
+      _operatingMode = 'recipe'; // 기본값
+    }
+  }
+
+  /// 생산량 위주 모드인지 확인
+  static bool isProductionMode() {
+    return getOperatingMode() == 'production';
+  }
+
+  /// 레시피 준수 모드인지 확인
+  static bool isRecipeMode() {
+    return getOperatingMode() == 'recipe';
+  }
+
   /// 메뉴 설정 로드
   static Future<List<MenuConfig>> loadMenuConfig() async {
     if (_menuConfigs != null) {
@@ -48,19 +97,33 @@ class ConfigService {
       final String jsonString = await rootBundle.loadString('assets/config/menu_config.json');
       final Map<String, dynamic> json = jsonDecode(jsonString);
       
+      // 전역 설정에서 shakeTimePercent, overcookTimePercent, operatingMode 읽기
+      if (json.containsKey('globalSettings')) {
+        final globalSettings = json['globalSettings'] as Map<String, dynamic>;
+        _globalShakeTimePercent = (globalSettings['shakeTimePercent'] as num?)?.toDouble() ?? 0.83;
+        _globalOvercookTimePercent = (globalSettings['overcookTimePercent'] as num?)?.toDouble() ?? 10.0;
+        _operatingMode = (globalSettings['operatingMode'] as String?) ?? 'recipe';
+      } else {
+        _globalShakeTimePercent = 0.83; // 기본값
+        _globalOvercookTimePercent = 10.0; // 기본값
+        _operatingMode = 'recipe'; // 기본값: 레시피 준수
+      }
+      
       final List<dynamic> menusJson = json['menus'] as List<dynamic>;
-      _menuConfigs = menusJson.map((menuJson) => MenuConfig.fromJson(menuJson)).toList();
+      _menuConfigs = menusJson.map((menuJson) => MenuConfig.fromJson(menuJson, _globalShakeTimePercent!)).toList();
       
       return _menuConfigs!;
     } catch (e) {
       print('Failed to load menu config: $e');
       // 기본값 반환
+      _globalShakeTimePercent = 0.83;
+      _globalOvercookTimePercent = 10.0;
+      _operatingMode = 'recipe';
       return [
-        const MenuConfig(
+        MenuConfig(
           name: '테스트 메뉴',
           preFryTime: 5,
           cookTime: 20,
-          shakeTime: 15,
           shapeTime: 5,
         ),
       ];
@@ -71,6 +134,9 @@ class ConfigService {
   static void clearCache() {
     _tcpConfig = null;
     _menuConfigs = null;
+    _globalShakeTimePercent = null;
+    _globalOvercookTimePercent = null;
+    _operatingMode = null;
   }
 }
 

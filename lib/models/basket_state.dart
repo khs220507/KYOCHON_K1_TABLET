@@ -17,6 +17,9 @@ class BasketState {
   bool isArrivingSoon; // 곧 도착 예정 상태 (목적지 바스켓)
   bool isUnavailable; // 사용불가 상태 (바스켓이 돌아오는 중)
   bool isOutputting; // 꺼내기중 상태
+  bool isInitializing; // 정리중 상태
+  bool isOvercooking; // 오버쿡 중
+  int overcookTime; // 오버쿡 경과 시간 (초)
 
   BasketState({
     required this.basketNumber,
@@ -35,6 +38,9 @@ class BasketState {
     this.isArrivingSoon = false,
     this.isUnavailable = false,
     this.isOutputting = false,
+    this.isInitializing = false,
+    this.isOvercooking = false,
+    this.overcookTime = 0,
   });
 
   BasketState copyWith({
@@ -53,6 +59,9 @@ class BasketState {
     bool? isArrivingSoon,
     bool? isUnavailable,
     bool? isOutputting,
+    bool? isInitializing,
+    bool? isOvercooking,
+    int? overcookTime,
   }) {
     return BasketState(
       basketNumber: basketNumber,
@@ -71,6 +80,9 @@ class BasketState {
       isArrivingSoon: isArrivingSoon ?? this.isArrivingSoon,
       isUnavailable: isUnavailable ?? this.isUnavailable,
       isOutputting: isOutputting ?? this.isOutputting,
+      isInitializing: isInitializing ?? this.isInitializing,
+      isOvercooking: isOvercooking ?? this.isOvercooking,
+      overcookTime: overcookTime ?? this.overcookTime,
     );
   }
 

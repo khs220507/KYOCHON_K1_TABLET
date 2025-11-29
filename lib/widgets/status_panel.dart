@@ -69,26 +69,33 @@ class StatusPanel extends StatelessWidget {
                         width: 280 * scale,
                         height: 240 * scale,
                         decoration: BoxDecoration(
-                          color: const Color(0xFFE5E5E5),
+                          color: (manualFryerState?.isEmpty ?? true) 
+                              ? const Color(0xFFE5E5E5) 
+                              : Colors.grey.shade400,
                           borderRadius: BorderRadius.circular(20 * scale),
-                          border: Border.all(color: Colors.black, width: 1),
+                          border: Border.all(
+                            color: Colors.black, 
+                            width: 1,
+                          ),
                         ),
                         child: Material(
                           color: Colors.transparent,
                           child: InkWell(
-                            onTap: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => MenuSelectionDialog(
-                                  scale: scale,
-                                  onMenuSelected: (MenuConfig menu) {
-                                    if (onMenuSelected != null) {
-                                      onMenuSelected!(menu);
-                                    }
-                                  },
-                                ),
-                              );
-                            },
+                            onTap: (manualFryerState?.isEmpty ?? true)
+                                ? () {
+                                    showDialog(
+                                      context: context,
+                                      builder: (context) => MenuSelectionDialog(
+                                        scale: scale,
+                                        onMenuSelected: (MenuConfig menu) {
+                                          if (onMenuSelected != null) {
+                                            onMenuSelected!(menu);
+                                          }
+                                        },
+                                      ),
+                                    );
+                                  }
+                                : null,
                             borderRadius: BorderRadius.circular(20 * scale),
                             child: Center(
                               child: Text(
@@ -96,7 +103,9 @@ class StatusPanel extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 60 * scale,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.black,
+                                  color: (manualFryerState?.isEmpty ?? true)
+                                      ? Colors.black
+                                      : Colors.grey.shade600,
                                 ),
                               ),
                             ),

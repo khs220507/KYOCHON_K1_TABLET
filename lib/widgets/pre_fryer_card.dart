@@ -36,7 +36,17 @@ class PreFryerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final isSideOnly = title == '사이드 전용';
-    final backgroundColor = isSideOnly ? const Color(0xFFDDDCDC) : const Color(0xFFE5E5E5);
+    final hasMenu = fryerState?.selectedMenu != null;
+    
+    // 카드 색상 결정: 메뉴 있음 > 기본 색상
+    final Color backgroundColor;
+    if (hasMenu) {
+      // 메뉴가 들어가 있으면 교촌 노란색
+      backgroundColor = const Color(0xFFFFD700);
+    } else {
+      // 비어있으면 기본 색상
+      backgroundColor = isSideOnly ? const Color(0xFFDDDCDC) : const Color(0xFFE5E5E5);
+    }
 
     return Container(
       width: width,
