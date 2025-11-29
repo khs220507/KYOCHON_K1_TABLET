@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 class MoveConfirmationDialog extends StatelessWidget {
   final double scale;
   final String menuName;
+  final int targetBasketNumber;
 
   const MoveConfirmationDialog({
     super.key,
     required this.scale,
     required this.menuName,
+    required this.targetBasketNumber,
   });
 
   @override
@@ -33,7 +35,7 @@ class MoveConfirmationDialog extends StatelessWidget {
             ),
             SizedBox(height: 20 * scale),
             Text(
-              '$menuName 초벌이 완료되었습니다.\n1번 바스켓으로 이동하시겠습니까?',
+              '$menuName 초벌이 완료되었습니다.\n$targetBasketNumber번 바스켓으로 이동하시겠습니까?',
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 40 * scale,

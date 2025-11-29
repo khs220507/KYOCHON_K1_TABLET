@@ -56,13 +56,93 @@ class SlotCard extends StatelessWidget {
           const Spacer(),
           // 메뉴 정보
           Text(
-            basketState.selectedMenu?.name ?? '비어있음',
+            basketState.isUnavailable 
+                ? '사용불가\n(바스켓이 돌아오는 중)'
+                : (basketState.selectedMenu?.name ?? '비어있음'),
+            textAlign: basketState.isUnavailable ? TextAlign.center : TextAlign.left,
             style: TextStyle(
-              fontSize: 40 * scale,
+              fontSize: basketState.isUnavailable ? 30 * scale : 40 * scale,
               fontWeight: FontWeight.bold,
-              color: basketState.isEmpty ? Colors.grey : Colors.black,
+              color: basketState.isUnavailable 
+                  ? Colors.red
+                  : (basketState.isEmpty ? Colors.grey : Colors.black),
             ),
           ),
+          // 이동중 상태 표시 (1번 바스켓)
+          if (basketState.isMoving)
+            Padding(
+              padding: EdgeInsets.only(top: 10 * scale),
+              child: Text(
+                '이동중',
+                style: TextStyle(
+                  fontSize: 35 * scale,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.purple,
+                ),
+              ),
+            ),
+          // 곧 도착 예정 상태 표시 (목적지 바스켓) - 메뉴가 없을 때만 표시
+          if (basketState.isArrivingSoon && basketState.isEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: 10 * scale),
+              child: Text(
+                '곧 도착 예정',
+                style: TextStyle(
+                  fontSize: 35 * scale,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.green,
+                ),
+              ),
+            ),
+          // 예약됨 상태 표시 (목적지 바스켓 - MOVE_START를 받았을 때)
+          if (basketState.isWaiting && !basketState.isArrivingSoon && basketState.isEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: 10 * scale),
+              child: Container(
+                padding: EdgeInsets.symmetric(horizontal: 15 * scale, vertical: 8 * scale),
+                decoration: BoxDecoration(
+                  color: Colors.amber.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(10 * scale),
+                  border: Border.all(color: Colors.amber, width: 2),
+                ),
+                child: Text(
+                  '예약됨\n(이동 예정)',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(
+                    fontSize: 32 * scale,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.orange.shade800,
+                  ),
+                ),
+              ),
+            ),
+          // 대기중 상태 표시 (기타)
+          if (basketState.isWaiting && !basketState.isArrivingSoon && !basketState.isEmpty)
+            Padding(
+              padding: EdgeInsets.only(top: 10 * scale),
+              child: Text(
+                '대기중',
+                style: TextStyle(
+                  fontSize: 35 * scale,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.orange,
+                ),
+              ),
+            ),
+          // 이동 예정 상태 표시 (MOVE_MOTION_START 전)
+          if (basketState.pendingMoveTo != null && !basketState.isMoving)
+            Padding(
+              padding: EdgeInsets.only(top: 10 * scale),
+              child: Text(
+                '${basketState.pendingMoveTo}번 바스켓으로\n이동 예정',
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 30 * scale,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue,
+                ),
+              ),
+            ),
           const Spacer(),
           // 조리 진행률 (퍼센트)
           if (basketState.selectedMenu != null && basketState.isCooking)
@@ -74,8 +154,8 @@ class SlotCard extends StatelessWidget {
                 color: Colors.red,
               ),
             ),
-          // 타이머 정보
-          if (basketState.selectedMenu != null)
+          // 타이머 정보 (이동중이거나 사용불가가 아닐 때만 표시)
+          if (basketState.selectedMenu != null && !basketState.isUnavailable)
             Text(
               '초벌 : ${_formatTime(basketState.preFryRemainingTime)} / 조리 : ${_formatTime(basketState.cookRemainingTime)}',
               style: TextStyle(

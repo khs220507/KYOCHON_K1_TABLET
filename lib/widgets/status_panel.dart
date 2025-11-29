@@ -9,6 +9,7 @@ class StatusPanel extends StatelessWidget {
   final Function(MenuConfig)? onMenuSelected;
   final FryerState? manualFryerState;
   final bool isBasket1Empty;
+  final List<String>? commandQueue; // 명령어 큐
 
   const StatusPanel({
     super.key,
@@ -16,6 +17,7 @@ class StatusPanel extends StatelessWidget {
     this.onMenuSelected,
     this.manualFryerState,
     this.isBasket1Empty = true,
+    this.commandQueue,
   });
 
   @override
@@ -167,6 +169,9 @@ class StatusPanel extends StatelessWidget {
                 ],
               ),
               SizedBox(height: 20 * scale),
+              // 명령어 큐 대기열
+              _buildCommandQueue(scale),
+              SizedBox(height: 20 * scale),
               // 완료 영역
               _buildCompleteArea(scale),
             ],
@@ -309,6 +314,88 @@ class StatusPanel extends StatelessWidget {
               ),
             ),
           ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildCommandQueue(double scale) {
+    final queue = commandQueue ?? [];
+    
+    return Container(
+      width: 500 * scale,
+      padding: EdgeInsets.all(15 * scale),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(15 * scale),
+        border: Border.all(color: Colors.black, width: 2),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Text(
+            '명령어 큐 대기열',
+            style: TextStyle(
+              fontSize: 35 * scale,
+              fontWeight: FontWeight.bold,
+              color: Colors.black,
+            ),
+          ),
+          SizedBox(height: 10 * scale),
+          if (queue.isEmpty)
+            Text(
+              '대기 중인 명령어 없음',
+              style: TextStyle(
+                fontSize: 30 * scale,
+                color: Colors.grey,
+              ),
+            )
+          else
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: queue.asMap().entries.map((entry) {
+                final index = entry.key;
+                final command = entry.value;
+                return Padding(
+                  padding: EdgeInsets.only(bottom: 5 * scale),
+                  child: Row(
+                    children: [
+                      Container(
+                        width: 40 * scale,
+                        height: 40 * scale,
+                        decoration: BoxDecoration(
+                          color: index == 0 ? Colors.orange : Colors.grey,
+                          shape: BoxShape.circle,
+                          border: Border.all(color: Colors.black, width: 1),
+                        ),
+                        child: Center(
+                          child: Text(
+                            '${index + 1}',
+                            style: TextStyle(
+                              fontSize: 25 * scale,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white,
+                            ),
+                          ),
+                        ),
+                      ),
+                      SizedBox(width: 10 * scale),
+                      Expanded(
+                        child: Text(
+                          command,
+                          style: TextStyle(
+                            fontSize: 30 * scale,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.black,
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                );
+              }).toList(),
+            ),
         ],
       ),
     );

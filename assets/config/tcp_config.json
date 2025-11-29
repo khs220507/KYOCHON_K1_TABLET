@@ -1,0 +1,11 @@
+{
+  "robot": {
+    "host": "0.0.0.0",
+    "port": 29999,
+    "feedbackPort": 30004
+  },
+  "server": {
+    "host": "10.0.2.2",
+    "port": 6601
+  }
+}

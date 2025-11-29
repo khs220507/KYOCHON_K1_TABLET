@@ -1,3 +1,5 @@
+import '../services/config_service.dart';
+
 // 메뉴 설정 데이터
 class MenuConfig {
   final String name;
@@ -14,52 +16,46 @@ class MenuConfig {
     required this.shapeTime,
   });
 
+  // JSON에서 생성
+  factory MenuConfig.fromJson(Map<String, dynamic> json) {
+    return MenuConfig(
+      name: json['name'] as String,
+      preFryTime: json['preFryTime'] as int,
+      cookTime: json['cookTime'] as int,
+      shakeTime: json['shakeTime'] as int,
+      shapeTime: json['shapeTime'] as int,
+    );
+  }
+
   // 초벌 후 추가 조리 시간 계산 (조리 시간 - 초벌 시간)
   int get additionalCookTime => cookTime - preFryTime;
 }
 
 // 메뉴 설정 데이터 저장소
 class MenuConfigRepository {
-  static final List<MenuConfig> menus = [
-    const MenuConfig(
-      name: '테스트 메뉴',
-      preFryTime: 5, // 5초
-      cookTime: 20, // 20초 (초벌 5초 포함)
-      shakeTime: 15, // 15초
-      shapeTime: 5, // 5초
-    ),
-    const MenuConfig(
-      name: '후라이드 치킨',
-      preFryTime: 300, // 5분
-      cookTime: 600, // 10분
-      shakeTime: 5, // 5초
-      shapeTime: 30, // 30초
-    ),
-    const MenuConfig(
-      name: '양념 치킨',
-      preFryTime: 300, // 5분
-      cookTime: 600, // 10분
-      shakeTime: 5, // 5초
-      shapeTime: 30, // 30초
-    ),
-    const MenuConfig(
-      name: '간장 치킨',
-      preFryTime: 300, // 5분
-      cookTime: 600, // 10분
-      shakeTime: 5, // 5초
-      shapeTime: 30, // 30초
-    ),
-    const MenuConfig(
-      name: '마늘 치킨',
-      preFryTime: 300, // 5분
-      cookTime: 600, // 10분
-      shakeTime: 5, // 5초
-      shapeTime: 30, // 30초
-    ),
-    // 추가 메뉴는 여기에 추가
-  ];
+  static List<MenuConfig>? _menus;
 
-  static MenuConfig? getMenuByName(String name) {
+  /// 메뉴 목록 가져오기 (JSON에서 로드)
+  static Future<List<MenuConfig>> getMenus() async {
+    if (_menus != null) {
+      return _menus!;
+    }
+    
+    // ConfigService를 통해 로드
+    _menus = await ConfigService.loadMenuConfig();
+    return _menus!;
+  }
+
+  /// 동기 방식으로 메뉴 가져오기 (이미 로드된 경우)
+  static List<MenuConfig> getMenusSync() {
+    if (_menus == null) {
+      throw Exception('Menus not loaded yet. Call getMenus() first.');
+    }
+    return _menus!;
+  }
+
+  static Future<MenuConfig?> getMenuByName(String name) async {
+    final menus = await getMenus();
     try {
       return menus.firstWhere((menu) => menu.name == name);
     } catch (e) {
@@ -67,8 +63,14 @@ class MenuConfigRepository {
     }
   }
 
-  static List<String> getMenuNames() {
+  static Future<List<String>> getMenuNames() async {
+    final menus = await getMenus();
     return menus.map((menu) => menu.name).toList();
+  }
+
+  /// 캐시 초기화
+  static void clearCache() {
+    _menus = null;
   }
 }
 

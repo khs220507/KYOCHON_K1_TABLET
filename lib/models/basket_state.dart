@@ -11,6 +11,11 @@ class BasketState {
   int cookRemainingTime; // 조리 남은 시간 (초)
   int shakeRemainingTime; // 흔들기 남은 시간 (초)
   int shapeRemainingTime; // 성형 남은 시간 (초)
+  bool isWaiting; // 대기중 상태 (목적지 바스켓)
+  int? pendingMoveTo; // 몇 번 바스켓으로 이동 예정인지 (출발지 바스켓)
+  bool isMoving; // 이동중 상태 (1번 바스켓)
+  bool isArrivingSoon; // 곧 도착 예정 상태 (목적지 바스켓)
+  bool isUnavailable; // 사용불가 상태 (바스켓이 돌아오는 중)
 
   BasketState({
     required this.basketNumber,
@@ -23,6 +28,11 @@ class BasketState {
     this.cookRemainingTime = 0,
     this.shakeRemainingTime = 0,
     this.shapeRemainingTime = 0,
+    this.isWaiting = false,
+    this.pendingMoveTo,
+    this.isMoving = false,
+    this.isArrivingSoon = false,
+    this.isUnavailable = false,
   });
 
   BasketState copyWith({
@@ -35,6 +45,11 @@ class BasketState {
     int? cookRemainingTime,
     int? shakeRemainingTime,
     int? shapeRemainingTime,
+    bool? isWaiting,
+    int? pendingMoveTo,
+    bool? isMoving,
+    bool? isArrivingSoon,
+    bool? isUnavailable,
   }) {
     return BasketState(
       basketNumber: basketNumber,
@@ -47,9 +62,13 @@ class BasketState {
       cookRemainingTime: cookRemainingTime ?? this.cookRemainingTime,
       shakeRemainingTime: shakeRemainingTime ?? this.shakeRemainingTime,
       shapeRemainingTime: shapeRemainingTime ?? this.shapeRemainingTime,
+      isWaiting: isWaiting ?? this.isWaiting,
+      pendingMoveTo: pendingMoveTo ?? this.pendingMoveTo,
+      isMoving: isMoving ?? this.isMoving,
+      isArrivingSoon: isArrivingSoon ?? this.isArrivingSoon,
+      isUnavailable: isUnavailable ?? this.isUnavailable,
     );
   }
 
   bool get isEmpty => selectedMenu == null;
 }
-

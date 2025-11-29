@@ -1,0 +1,39 @@
+{
+  "menus": [
+    {
+      "name": "테스트 메뉴",
+      "preFryTime": 3,
+      "cookTime": 30,
+      "shakeTime": 15,
+      "shapeTime": 5
+    },
+    {
+      "name": "후라이드 치킨",
+      "preFryTime": 300,
+      "cookTime": 600,
+      "shakeTime": 5,
+      "shapeTime": 30
+    },
+    {
+      "name": "양념 치킨",
+      "preFryTime": 300,
+      "cookTime": 600,
+      "shakeTime": 5,
+      "shapeTime": 30
+    },
+    {
+      "name": "간장 치킨",
+      "preFryTime": 300,
+      "cookTime": 600,
+      "shakeTime": 5,
+      "shapeTime": 30
+    },
+    {
+      "name": "마늘 치킨",
+      "preFryTime": 300,
+      "cookTime": 600,
+      "shakeTime": 5,
+      "shapeTime": 30
+    }
+  ]
+}

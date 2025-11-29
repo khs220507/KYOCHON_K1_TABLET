@@ -1,0 +1,29 @@
+MESA 로그 필터링 가이드
+=====================
+
+VS Code 터미널 필터:
+-------------------
+flutter run 2>&1 | Where-Object { $_ -notmatch "MESA" -and $_ -match "I/flutter" }
+
+
+Android Studio Logcat 필터:
+--------------------------
+정규식 필터:
+^(?!.*MESA).*I/flutter
+
+또는 간단하게:
+I/flutter
+
+
+VS Code 출력 패널 필터:
+----------------------
+정규식:
+^(?!.*MESA).*
+
+
+간단한 필터 (가장 추천):
+-----------------------
+I/flutter
+
+이렇게 하면 Flutter 앱 로그만 표시되고 MESA 로그는 숨겨집니다.
+
