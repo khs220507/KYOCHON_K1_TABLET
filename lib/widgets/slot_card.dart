@@ -143,6 +143,19 @@ class SlotCard extends StatelessWidget {
                 ),
               ),
             ),
+          // 꺼내기중 상태 표시
+          if (basketState.isOutputting)
+            Padding(
+              padding: EdgeInsets.only(top: 10 * scale),
+              child: Text(
+                '꺼내기중',
+                style: TextStyle(
+                  fontSize: 35 * scale,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.blue.shade700,
+                ),
+              ),
+            ),
           const Spacer(),
           // 조리 진행률 (퍼센트)
           if (basketState.selectedMenu != null && basketState.isCooking)

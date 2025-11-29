@@ -16,6 +16,7 @@ class BasketState {
   bool isMoving; // 이동중 상태 (1번 바스켓)
   bool isArrivingSoon; // 곧 도착 예정 상태 (목적지 바스켓)
   bool isUnavailable; // 사용불가 상태 (바스켓이 돌아오는 중)
+  bool isOutputting; // 꺼내기중 상태
 
   BasketState({
     required this.basketNumber,
@@ -33,6 +34,7 @@ class BasketState {
     this.isMoving = false,
     this.isArrivingSoon = false,
     this.isUnavailable = false,
+    this.isOutputting = false,
   });
 
   BasketState copyWith({
@@ -50,6 +52,7 @@ class BasketState {
     bool? isMoving,
     bool? isArrivingSoon,
     bool? isUnavailable,
+    bool? isOutputting,
   }) {
     return BasketState(
       basketNumber: basketNumber,
@@ -67,6 +70,7 @@ class BasketState {
       isMoving: isMoving ?? this.isMoving,
       isArrivingSoon: isArrivingSoon ?? this.isArrivingSoon,
       isUnavailable: isUnavailable ?? this.isUnavailable,
+      isOutputting: isOutputting ?? this.isOutputting,
     );
   }
 
