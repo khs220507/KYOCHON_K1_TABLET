@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import 'pages/home_page.dart';
 import 'pages/settings_page.dart';
@@ -58,26 +59,26 @@ class _MainScreenState extends State<MainScreen> {
       SettingsPage(scale: scale),
       // TODO: 로그 데이터 페이지
       Container(
-        color: Colors.white,
+        color: const Color(0xFFFFFFFF),
         child: const Center(child: Text('로그 데이터')),
       ),
       // TODO: 예비 1 페이지
       Container(
-        color: Colors.white,
+        color: const Color(0xFFFFFFFF),
         child: const Center(child: Text('예비 1')),
       ),
       // TODO: 예비 2 페이지
       Container(
-        color: Colors.white,
+        color: const Color(0xFFFFFFFF),
         child: const Center(child: Text('예비 2')),
       ),
       // TODO: 예비 3 페이지
       Container(
-        color: Colors.white,
+        color: const Color(0xFFFFFFFF),
         child: const Center(child: Text('예비 3')),
       ),
     ];
-    
+
     return _cachedPages!;
   }
 
@@ -107,10 +108,7 @@ class _MainScreenState extends State<MainScreen> {
         ),
       ),
       child: Scaffold(
-        body: IndexedStack(
-          index: _currentIndex,
-          children: pages,
-        ),
+        body: IndexedStack(index: _currentIndex, children: pages),
         bottomNavigationBar: _buildBottomNavigationBar(scale),
       ),
     );
@@ -120,10 +118,10 @@ class _MainScreenState extends State<MainScreen> {
     return Container(
       height: 92 * scale,
       decoration: const BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFFFFFFF),
         boxShadow: [
           BoxShadow(
-            color: Colors.black12,
+            color: const Color(0x1F000000),
             blurRadius: 4,
             offset: Offset(0, -2),
           ),
@@ -169,7 +167,7 @@ class _MainScreenState extends State<MainScreen> {
               style: TextStyle(
                 fontSize: 35 * scale,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: const Color(0xFFFFFFFF),
               ),
             ),
           ),
@@ -188,11 +186,11 @@ class _MainScreenState extends State<MainScreen> {
       child: GestureDetector(
         onTap: () {
           if (isEmergency) {
-            // TODO: 비상정지 동작
-            print('비상정지');
+            // TODO: 비상정지 동작 구현 필요
+            debugPrint('비상정지');
           } else if (isExit) {
-            // TODO: 프로그램 종료 동작
-            print('프로그램 종료');
+            // TODO: 프로그램 종료 동작 구현 필요
+            debugPrint('프로그램 종료');
           }
         },
         child: Container(
@@ -200,9 +198,9 @@ class _MainScreenState extends State<MainScreen> {
           margin: EdgeInsets.symmetric(horizontal: 7.5 * scale),
           decoration: BoxDecoration(
             color: isEmergency
-                ? Colors.red
+                ? const Color(0xFFF44336)
                 : isExit
-                ? Colors.orange
+                ? const Color(0xFFFF9800)
                 : const Color(0xFFE5E5E5),
             borderRadius: BorderRadius.circular(16 * scale),
           ),
@@ -212,7 +210,7 @@ class _MainScreenState extends State<MainScreen> {
               style: TextStyle(
                 fontSize: 35 * scale,
                 fontWeight: FontWeight.bold,
-                color: Colors.white,
+                color: const Color(0xFFFFFFFF),
               ),
             ),
           ),

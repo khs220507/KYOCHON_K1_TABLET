@@ -21,7 +21,7 @@ class CompleteArea extends StatelessWidget {
               decoration: BoxDecoration(
                 color: const Color(0xFFE5E5E5),
                 borderRadius: BorderRadius.circular(20 * scale),
-                border: Border.all(color: Colors.black, width: 1),
+                border: Border.all(color: const Color(0xFF000000), width: 1),
               ),
               padding: EdgeInsets.all(15 * scale),
               child: Center(
@@ -30,7 +30,7 @@ class CompleteArea extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 40 * scale,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: const Color(0xFF000000),
                   ),
                 ),
               ),
@@ -58,7 +58,7 @@ class CompleteArea extends StatelessWidget {
               style: TextStyle(
                 fontSize: 14 * scale,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: const Color(0xFF000000),
               ),
             ),
           ),
@@ -69,7 +69,7 @@ class CompleteArea extends StatelessWidget {
           style: TextStyle(
             fontSize: 45 * scale,
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: const Color(0xFF000000),
           ),
         ),
       ],

@@ -54,7 +54,7 @@ class PreFryerCard extends StatelessWidget {
       decoration: BoxDecoration(
         color: backgroundColor,
         borderRadius: BorderRadius.circular(20 * scale),
-        border: Border.all(color: Colors.black, width: 1),
+        border: Border.all(color: const Color(0xFF000000), width: 1),
       ),
       padding: EdgeInsets.all(10 * scale),
       child: Column(
@@ -65,7 +65,7 @@ class PreFryerCard extends StatelessWidget {
             title,
             style: TextStyle(
               fontSize: 35 * scale,
-              color: Colors.black,
+              color: const Color(0xFF000000),
             ),
           ),
           SizedBox(height: 5 * scale),
@@ -111,7 +111,7 @@ class PreFryerCard extends StatelessWidget {
               style: TextStyle(
                 fontSize: 40 * scale,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: const Color(0xFF000000),
               ),
             ),
         ],

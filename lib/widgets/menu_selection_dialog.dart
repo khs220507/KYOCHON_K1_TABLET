@@ -47,7 +47,7 @@ class _MenuSelectionDialogState extends State<MenuSelectionDialog> {
         final globalShakeTimePercent = ConfigService.getGlobalShakeTimePercent();
 
         return Dialog(
-          backgroundColor: Colors.white,
+          backgroundColor: const Color(0xFFFFFFFF),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20 * widget.scale),
           ),
@@ -82,7 +82,7 @@ class _MenuSelectionDialogState extends State<MenuSelectionDialog> {
                         decoration: BoxDecoration(
                           color: const Color(0xFFE5E5E5),
                           borderRadius: BorderRadius.circular(15 * widget.scale),
-                          border: Border.all(color: Colors.black, width: 1),
+                          border: Border.all(color: const Color(0xFF000000), width: 1),
                         ),
                         child: Material(
                           color: Colors.transparent,
@@ -102,7 +102,7 @@ class _MenuSelectionDialogState extends State<MenuSelectionDialog> {
                                     style: TextStyle(
                                       fontSize: 40 * widget.scale,
                                       fontWeight: FontWeight.bold,
-                                      color: Colors.black,
+                                      color: const Color(0xFF000000),
                                     ),
                                   ),
                                   SizedBox(height: 10 * widget.scale),
@@ -165,14 +165,14 @@ class _MenuSelectionDialogState extends State<MenuSelectionDialog> {
                         decoration: BoxDecoration(
                           color: const Color(0xFFE5E5E5),
                           borderRadius: BorderRadius.circular(10 * widget.scale),
-                          border: Border.all(color: Colors.black, width: 1),
+                          border: Border.all(color: const Color(0xFF000000), width: 1),
                         ),
                         child: Text(
                           '취소',
                           style: TextStyle(
                             fontSize: 35 * widget.scale,
                             fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                            color: const Color(0xFF000000),
                           ),
                         ),
                       ),

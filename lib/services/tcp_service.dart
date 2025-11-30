@@ -2,10 +2,20 @@ import 'dart:async';
 import 'dart:collection';
 import 'dart:io';
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import '../config/tcp_config.dart';
 import '../services/config_service.dart';
 
 class TcpService {
+  // 싱글톤 인스턴스
+  static TcpService? _instance;
+  static TcpService get instance {
+    _instance ??= TcpService._internal();
+    return _instance!;
+  }
+
+  TcpService._internal();
+
   Socket? _commandSocket;
   Socket? _feedbackSocket;
   Socket? _serverSocket; // 6601 포트로 메시지를 보내는 소켓
@@ -38,16 +48,16 @@ class TcpService {
           _commandController.add(message);
         },
         onError: (error) {
-          print('Command socket error: $error');
+          debugPrint('Command socket error: $error');
         },
         onDone: () {
-          print('Command socket closed');
+          debugPrint('Command socket closed');
           _isConnected = false;
         },
       );
       return true;
     } catch (e) {
-      print('Failed to connect to robot: $e');
+      debugPrint('Failed to connect to robot: $e');
       return false;
     }
   }
@@ -66,15 +76,15 @@ class TcpService {
           _feedbackController.add(message);
         },
         onError: (error) {
-          print('Feedback socket error: $error');
+          debugPrint('Feedback socket error: $error');
         },
         onDone: () {
-          print('Feedback socket closed');
+          debugPrint('Feedback socket closed');
         },
       );
       return true;
     } catch (e) {
-      print('Failed to connect to feedback: $e');
+      debugPrint('Failed to connect to feedback: $e');
       return false;
     }
   }
@@ -90,8 +100,8 @@ class TcpService {
       serverHost = host ?? config.serverHost;
       serverPort = config.serverPort;
 
-      print('Attempting to connect to server: $serverHost:$serverPort');
-      print(
+      debugPrint('Attempting to connect to server: $serverHost:$serverPort');
+      debugPrint(
         'Config loaded - serverHost: ${config.serverHost}, serverPort: ${config.serverPort}',
       );
 
@@ -104,27 +114,29 @@ class TcpService {
           _serverController.add(message);
         },
         onError: (error) {
-          print('Server socket error: $error');
+          debugPrint('Server socket error: $error');
           _isConnected = false;
         },
         onDone: () {
-          print('Server socket closed');
+          debugPrint('Server socket closed');
           _isConnected = false;
         },
       );
 
-      print('Successfully connected to server at $serverHost:$serverPort');
+      debugPrint('Successfully connected to server at $serverHost:$serverPort');
       return true;
     } catch (e) {
-      print('Failed to connect to server: $e');
+      debugPrint('Failed to connect to server: $e');
       config ??= await TcpConfig.loadConfig();
-      print('Connection attempt details:');
-      print('  Target host: ${serverHost ?? 'unknown'}');
-      print('  Target port: ${serverPort ?? 'unknown'}');
-      print('  Config serverHost: ${config.serverHost}');
-      print('  Config serverPort: ${config.serverPort}');
-      print('Note: On Android emulator, use 10.0.2.2 instead of localhost');
-      print(
+      debugPrint('Connection attempt details:');
+      debugPrint('  Target host: ${serverHost ?? 'unknown'}');
+      debugPrint('  Target port: ${serverPort ?? 'unknown'}');
+      debugPrint('  Config serverHost: ${config.serverHost}');
+      debugPrint('  Config serverPort: ${config.serverPort}');
+      debugPrint(
+        'Note: On Android emulator, use 10.0.2.2 instead of localhost',
+      );
+      debugPrint(
         'Note: On physical device, use your computer\'s IP address instead of localhost',
       );
       _isConnected = false;
@@ -148,7 +160,7 @@ class TcpService {
               _serverController.add(message);
             },
             onError: (error) {
-              print('Server listener socket error: $error');
+              debugPrint('Server listener socket error: $error');
             },
             onDone: () {
               socket.destroy();
@@ -156,13 +168,13 @@ class TcpService {
           );
         },
         onError: (error) {
-          print('Server listener error: $error');
+          debugPrint('Server listener error: $error');
         },
       );
-      print('Server listener started on port ${config.serverPort}');
+      debugPrint('Server listener started on port ${config.serverPort}');
       return true;
     } catch (e) {
-      print('Failed to start server listener: $e');
+      debugPrint('Failed to start server listener: $e');
       return false;
     }
   }
@@ -170,25 +182,25 @@ class TcpService {
   // 큐 상태 출력 헬퍼 함수
   void _printQueueStatus(String action, String? message) {
     final timestamp = DateTime.now().toString().substring(11, 19);
-    print('═══════════════════════════════════════════════════════');
-    print('[$timestamp] 📋 큐 대기열 상태: $action');
+    debugPrint('═══════════════════════════════════════════════════════');
+    debugPrint('[$timestamp] 📋 큐 대기열 상태: $action');
     if (message != null) {
-      print('  명령어: $message');
+      debugPrint('  명령어: $message');
     }
-    print('  큐 길이: ${_commandQueue.length}개');
+    debugPrint('  큐 길이: ${_commandQueue.length}개');
     if (_commandQueue.isNotEmpty) {
-      print('  큐 내용:');
+      debugPrint('  큐 내용:');
       int index = 1;
       for (var cmd in _commandQueue) {
-        print('    [$index] $cmd');
+        debugPrint('    [$index] $cmd');
         index++;
       }
     } else {
-      print('  큐 내용: (비어있음)');
+      debugPrint('  큐 내용: (비어있음)');
     }
-    print('  RUNNING 상태: $_isRunning');
-    print('  처리 중: $_isProcessingQueue');
-    print('═══════════════════════════════════════════════════════');
+    debugPrint('  RUNNING 상태: $_isRunning');
+    debugPrint('  처리 중: $_isProcessingQueue');
+    debugPrint('═══════════════════════════════════════════════════════');
   }
 
   // 6601 포트로 메시지 전송 (큐에 추가)
@@ -199,28 +211,28 @@ class TcpService {
     // MOVE 명령어의 경우 중복 체크 (큐에 추가하기 전에)
     if (message.toUpperCase().startsWith('MOVE_')) {
       if (_commandQueue.contains(message)) {
-        print('[$timestamp] ⚠️  MOVE 명령어 중복 방지: 큐에 이미 "$message" 명령어가 있음');
-        print('  - 큐 내용: $_commandQueue');
-        print('  - 명령어 추가 취소');
+        debugPrint('[$timestamp] ⚠️  MOVE 명령어 중복 방지: 큐에 이미 "$message" 명령어가 있음');
+        debugPrint('  - 큐 내용: $_commandQueue');
+        debugPrint('  - 명령어 추가 취소');
         return false; // 중복이므로 추가하지 않음
       }
     }
 
     // 우선순위에 따라 명령어를 큐에 삽입
     _insertCommandByPriority(message);
-    
+
     final operatingMode = ConfigService.getOperatingMode();
     final priority = _getCommandPriority(message);
-    
+
     if (_isRunning) {
-      print('[$timestamp] 📋 명령어 큐에 추가 (RUNNING 상태이지만 큐에 추가): $message');
-      print('  - 운영 모드: $operatingMode');
-      print('  - 우선순위: $priority');
-      print('  ⏸️  실제 전송은 RUNNING 상태가 해제된 후 진행됩니다.');
+      debugPrint('[$timestamp] 📋 명령어 큐에 추가 (RUNNING 상태이지만 큐에 추가): $message');
+      debugPrint('  - 운영 모드: $operatingMode');
+      debugPrint('  - 우선순위: $priority');
+      debugPrint('  ⏸️  실제 전송은 RUNNING 상태가 해제된 후 진행됩니다.');
     } else {
-      print('[$timestamp] 📋 명령어 큐에 추가: $message');
-      print('  - 운영 모드: $operatingMode');
-      print('  - 우선순위: $priority');
+      debugPrint('[$timestamp] 📋 명령어 큐에 추가: $message');
+      debugPrint('  - 운영 모드: $operatingMode');
+      debugPrint('  - 우선순위: $priority');
     }
     _printQueueStatus('명령어 추가', message);
 
@@ -233,7 +245,7 @@ class TcpService {
     if (!_isRunning) {
       _processQueue();
     } else {
-      print('[$timestamp] ⏸️  RUNNING 상태: 큐 처리는 END 메시지 수신 후 재개됩니다.');
+      debugPrint('[$timestamp] ⏸️  RUNNING 상태: 큐 처리는 END 메시지 수신 후 재개됩니다.');
     }
 
     // 큐에 추가 완료
@@ -246,12 +258,12 @@ class TcpService {
 
     // E_OUTPUT 명령어는 최우선순위로 추가
     _insertCommandByPriority(message);
-    
+
     final priority = _getCommandPriority(message);
-    print('[$timestamp] 🚨 이머전시 명령어 큐에 추가: $message');
-    print('  - 우선순위: $priority (최우선)');
-    print('  - E_OUTPUT들 사이에서는 먼저 추가된 것이 먼저 처리됨');
-    
+    debugPrint('[$timestamp] 🚨 이머전시 명령어 큐에 추가: $message');
+    debugPrint('  - 우선순위: $priority (최우선)');
+    debugPrint('  - E_OUTPUT들 사이에서는 먼저 추가된 것이 먼저 처리됨');
+
     _printQueueStatus('이머전시 명령어 추가', message);
 
     // 큐 업데이트 알림 (안전하게)
@@ -263,7 +275,7 @@ class TcpService {
     if (!_isRunning) {
       _processQueue();
     } else {
-      print('[$timestamp] ⏸️  RUNNING 상태: 큐 처리는 END 메시지 수신 후 재개됩니다.');
+      debugPrint('[$timestamp] ⏸️  RUNNING 상태: 큐 처리는 END 메시지 수신 후 재개됩니다.');
     }
 
     return true;
@@ -275,12 +287,12 @@ class TcpService {
   int _getCommandPriority(String command) {
     final upperCmd = command.toUpperCase();
     final isProduction = ConfigService.isProductionMode();
-    
+
     // E_OUTPUT은 항상 최우선 (생산량 위주 모드에서만 사용)
     if (upperCmd.startsWith('E_OUTPUT_')) {
       return 0;
     }
-    
+
     if (isProduction) {
       // 생산량 위주: INPUT(1) -> MOVE(2) -> OUTPUT(3) -> SHAPING(4) -> CLEAN(5)
       if (upperCmd.startsWith('INPUT_')) return 1;
@@ -296,7 +308,7 @@ class TcpService {
       if (upperCmd.startsWith('SHAPING_')) return 4;
       if (upperCmd.startsWith('CLEAN_')) return 5;
     }
-    
+
     // 알 수 없는 명령어는 낮은 우선순위
     return 99;
   }
@@ -304,26 +316,26 @@ class TcpService {
   /// 우선순위에 따라 명령어를 큐에 삽입
   void _insertCommandByPriority(String message) {
     final messagePriority = _getCommandPriority(message);
-    
+
     // 큐가 비어있으면 그냥 추가
     if (_commandQueue.isEmpty) {
       _commandQueue.add(message);
       return;
     }
-    
+
     // 우선순위에 따라 적절한 위치 찾기
     int insertIndex = _commandQueue.length;
     for (int i = 0; i < _commandQueue.length; i++) {
       final cmd = _commandQueue.elementAt(i);
       final cmdPriority = _getCommandPriority(cmd);
-      
+
       // 같은 우선순위면 먼저 추가된 것이 앞에 (FIFO)
       if (messagePriority < cmdPriority) {
         insertIndex = i;
         break;
       }
     }
-    
+
     // 적절한 위치에 삽입
     if (insertIndex == _commandQueue.length) {
       _commandQueue.add(message);
@@ -341,7 +353,7 @@ class TcpService {
     if (_isProcessingQueue || _commandQueue.isEmpty) {
       if (_commandQueue.isEmpty) {
         final timestamp = DateTime.now().toString().substring(11, 19);
-        print('[$timestamp] ℹ️  큐 처리 시도: 큐가 비어있음');
+        debugPrint('[$timestamp] ℹ️  큐 처리 시도: 큐가 비어있음');
       }
       return;
     }
@@ -349,7 +361,7 @@ class TcpService {
     // RUNNING 상태가 아니면 처리 시작
     if (_isRunning) {
       final timestamp = DateTime.now().toString().substring(11, 19);
-      print('[$timestamp] ⏸️  RUNNING 상태: 큐 처리 대기 중');
+      debugPrint('[$timestamp] ⏸️  RUNNING 상태: 큐 처리 대기 중');
       return;
     }
 
@@ -361,7 +373,7 @@ class TcpService {
       // RUNNING 상태가 되면 큐 처리 중단
       if (_isRunning) {
         final timestamp = DateTime.now().toString().substring(11, 19);
-        print('[$timestamp] ⚠️  RUNNING 상태 감지: 명령어 큐 처리 중단');
+        debugPrint('[$timestamp] ⚠️  RUNNING 상태 감지: 명령어 큐 처리 중단');
         _printQueueStatus('큐 처리 중단 (RUNNING 상태)', null);
         _isProcessingQueue = false;
         return;
@@ -371,24 +383,24 @@ class TcpService {
       final config = await TcpConfig.loadConfig();
       final timestamp = DateTime.now().toString().substring(11, 19);
 
-      print('═══════════════════════════════════════════════════════');
-      print('[$timestamp] 📤 명령어 전송 시도 (큐에서 처리 - 1개만)');
-      print('  포트: ${config.serverPort} (서버)');
-      print('  호스트: ${config.serverHost}');
-      print('  명령어: $message');
-      print('  큐에서 제거됨: ✅ (전송 시도 전에 큐에서 제거)');
-      print('═══════════════════════════════════════════════════════');
-      
+      debugPrint('═══════════════════════════════════════════════════════');
+      debugPrint('[$timestamp] 📤 명령어 전송 시도 (큐에서 처리 - 1개만)');
+      debugPrint('  포트: ${config.serverPort} (서버)');
+      debugPrint('  호스트: ${config.serverHost}');
+      debugPrint('  명령어: $message');
+      debugPrint('  큐에서 제거됨: ✅ (전송 시도 전에 큐에서 제거)');
+      debugPrint('═══════════════════════════════════════════════════════');
+
       // 큐에서 제거 후 상태 출력
       _printQueueStatus('명령어 큐에서 제거 (전송 시도)', message);
 
       if (_serverSocket == null || !_isConnected) {
         // 연결이 안 되어 있으면 자동으로 연결 시도
-        print('[$timestamp] ⚠️  서버 연결되지 않음, 연결 시도 중...');
+        debugPrint('[$timestamp] ⚠️  서버 연결되지 않음, 연결 시도 중...');
         final connected = await connectToServer();
         if (!connected) {
-          print('[$timestamp] ❌ 명령어 전송 실패: 서버 연결 불가');
-          print('[$timestamp] ⚠️  명령어를 큐에 다시 추가: $message');
+          debugPrint('[$timestamp] ❌ 명령어 전송 실패: 서버 연결 불가');
+          debugPrint('[$timestamp] ⚠️  명령어를 큐에 다시 추가: $message');
           _commandQueue.addFirst(message); // 실패한 명령어를 다시 큐 앞에 추가
           _isProcessingQueue = false;
           return;
@@ -397,16 +409,18 @@ class TcpService {
 
       try {
         _serverSocket!.add(utf8.encode(message));
-        print('[$timestamp] ✅ 명령어 전송 성공: $message');
-        print('  → ${config.serverHost}:${config.serverPort}로 전송됨');
-        print('  큐 상태: 명령어가 큐에서 제거되어 전송됨 (큐에 남은 명령어: ${_commandQueue.length}개)');
+        debugPrint('[$timestamp] ✅ 명령어 전송 성공: $message');
+        debugPrint('  → ${config.serverHost}:${config.serverPort}로 전송됨');
+        debugPrint(
+          '  큐 상태: 명령어가 큐에서 제거되어 전송됨 (큐에 남은 명령어: ${_commandQueue.length}개)',
+        );
 
         // MOVE 명령어인 경우 전송 후 즉시 처리 중 상태 해제
         // (MOVE_START를 받으면 명령어 처리가 시작된 것이므로)
         if (message.toUpperCase().startsWith('MOVE_')) {
           _isProcessingQueue = false;
-          print('[$timestamp] 🔄 MOVE 명령어 전송 완료: 처리 중 상태 해제');
-          print('  - MOVE_START 수신 대기 중...');
+          debugPrint('[$timestamp] 🔄 MOVE 명령어 전송 완료: 처리 중 상태 해제');
+          debugPrint('  - MOVE_START 수신 대기 중...');
         }
 
         // 큐 업데이트 알림 (명령어가 큐에서 제거됨) (안전하게)
@@ -417,11 +431,13 @@ class TcpService {
         // 명령어 전송 후 약간의 대기 시간 (서버 처리 시간 고려)
         await Future.delayed(const Duration(milliseconds: 100));
       } catch (e) {
-        print('[$timestamp] ❌ 명령어 전송 실패: $e');
-        print('  명령어: $message');
-        print('[$timestamp] ⚠️  명령어를 큐 앞에 다시 추가: $message');
+        debugPrint('[$timestamp] ❌ 명령어 전송 실패: $e');
+        debugPrint('  명령어: $message');
+        debugPrint('[$timestamp] ⚠️  명령어를 큐 앞에 다시 추가: $message');
         _commandQueue.addFirst(message); // 실패한 명령어를 다시 큐 앞에 추가
-        print('  큐 상태: 전송 실패로 인해 큐 앞에 재추가됨 (큐에 남은 명령어: ${_commandQueue.length}개)');
+        debugPrint(
+          '  큐 상태: 전송 실패로 인해 큐 앞에 재추가됨 (큐에 남은 명령어: ${_commandQueue.length}개)',
+        );
         _printQueueStatus('명령어 전송 실패 - 큐에 재추가', message);
         _isConnected = false;
         _isProcessingQueue = false;
@@ -436,11 +452,13 @@ class TcpService {
     if (!_queueUpdateController.isClosed) {
       _queueUpdateController.add(_commandQueue.length);
     }
-    
+
     // 큐에 더 많은 명령어가 있으면 로그만 출력 (다음 RUNNING 해제 시 처리)
     if (_commandQueue.isNotEmpty) {
       final timestamp = DateTime.now().toString().substring(11, 19);
-      print('[$timestamp] ℹ️  큐에 ${_commandQueue.length}개 명령어 대기 중 (다음 RUNNING 해제 시 처리)');
+      debugPrint(
+        '[$timestamp] ℹ️  큐에 ${_commandQueue.length}개 명령어 대기 중 (다음 RUNNING 해제 시 처리)',
+      );
     }
   }
 
@@ -449,9 +467,9 @@ class TcpService {
     final timestamp = DateTime.now().toString().substring(11, 19);
     final oldState = _isRunning;
     _isRunning = isRunning;
-    
+
     if (oldState != isRunning) {
-      print('[$timestamp] 🔄 RUNNING 상태 변경: $oldState → $isRunning');
+      debugPrint('[$timestamp] 🔄 RUNNING 상태 변경: $oldState → $isRunning');
       _printQueueStatus('RUNNING 상태 변경', null);
     }
   }
@@ -461,9 +479,9 @@ class TcpService {
     final timestamp = DateTime.now().toString().substring(11, 19);
     final oldState = _isProcessingQueue;
     _isProcessingQueue = isProcessing;
-    
+
     if (oldState != isProcessing) {
-      print('[$timestamp] 🔄 처리 중 상태 변경: $oldState → $isProcessing');
+      debugPrint('[$timestamp] 🔄 처리 중 상태 변경: $oldState → $isProcessing');
       _printQueueStatus('처리 중 상태 변경', null);
     }
   }
@@ -480,7 +498,7 @@ class TcpService {
   // 큐 처리 재개 (외부에서 호출 가능)
   void processQueue() {
     final timestamp = DateTime.now().toString().substring(11, 19);
-    print('[$timestamp] 🔄 큐 처리 재개 요청');
+    debugPrint('[$timestamp] 🔄 큐 처리 재개 요청');
     _printQueueStatus('큐 처리 재개', null);
     _processQueue();
   }
@@ -489,12 +507,12 @@ class TcpService {
   void removeMoveCommand(int targetBasketIndex) {
     final moveCommand = 'MOVE_$targetBasketIndex';
     final removed = _commandQueue.remove(moveCommand);
-    
+
     if (removed) {
       final timestamp = DateTime.now().toString().substring(11, 19);
-      print('[$timestamp] 🗑️  MOVE 명령어 큐에서 제거: $moveCommand');
+      debugPrint('[$timestamp] 🗑️  MOVE 명령어 큐에서 제거: $moveCommand');
       _printQueueStatus('MOVE 명령어 제거', moveCommand);
-      
+
       // 큐 업데이트 알림
       if (!_queueUpdateController.isClosed) {
         _queueUpdateController.add(_commandQueue.length);
@@ -506,12 +524,12 @@ class TcpService {
   void removeOutputCommand(int basketIndex) {
     final outputCommand = 'OUTPUT_$basketIndex';
     final removed = _commandQueue.remove(outputCommand);
-    
+
     if (removed) {
       final timestamp = DateTime.now().toString().substring(11, 19);
-      print('[$timestamp] 🗑️  OUTPUT 명령어 큐에서 제거: $outputCommand');
+      debugPrint('[$timestamp] 🗑️  OUTPUT 명령어 큐에서 제거: $outputCommand');
       _printQueueStatus('OUTPUT 명령어 제거', outputCommand);
-      
+
       // 큐 업데이트 알림
       if (!_queueUpdateController.isClosed) {
         _queueUpdateController.add(_commandQueue.length);
@@ -519,10 +537,39 @@ class TcpService {
     }
   }
 
+  // 큐를 운영모드에 맞게 재정렬
+  void reorderQueueByOperatingMode() {
+    if (_commandQueue.isEmpty) {
+      return;
+    }
+
+    final timestamp = DateTime.now().toString().substring(11, 19);
+    debugPrint('[$timestamp] 🔄 운영모드 변경으로 인한 큐 재정렬 시작');
+    debugPrint('  - 현재 큐 크기: ${_commandQueue.length}');
+    _printQueueStatus('재정렬 전', null);
+
+    // 큐를 리스트로 변환
+    final tempList = _commandQueue.toList();
+    _commandQueue.clear();
+
+    // 새로운 우선순위에 따라 재정렬하여 큐에 다시 추가
+    for (final command in tempList) {
+      _insertCommandByPriority(command);
+    }
+
+    debugPrint('[$timestamp] ✅ 큐 재정렬 완료');
+    _printQueueStatus('재정렬 후', null);
+
+    // 큐 업데이트 알림
+    if (!_queueUpdateController.isClosed) {
+      _queueUpdateController.add(_commandQueue.length);
+    }
+  }
+
   // 큐 초기화
   void clearQueue() {
     final timestamp = DateTime.now().toString().substring(11, 19);
-    print('[$timestamp] 🗑️  명령어 큐 초기화 요청');
+    debugPrint('[$timestamp] 🗑️  명령어 큐 초기화 요청');
     _commandQueue.clear();
     _isProcessingQueue = false;
     if (!_queueUpdateController.isClosed) {
@@ -536,25 +583,25 @@ class TcpService {
     final config = await TcpConfig.loadConfig();
     final timestamp = DateTime.now().toString().substring(11, 19);
 
-    print('═══════════════════════════════════════════════════════');
-    print('[$timestamp] 📤 로봇 명령어 전송 시도');
-    print('  포트: ${config.robotPort} (로봇 명령어)');
-    print('  호스트: ${config.robotHost}');
-    print('  명령어: $command');
-    print('═══════════════════════════════════════════════════════');
+    debugPrint('═══════════════════════════════════════════════════════');
+    debugPrint('[$timestamp] 📤 로봇 명령어 전송 시도');
+    debugPrint('  포트: ${config.robotPort} (로봇 명령어)');
+    debugPrint('  호스트: ${config.robotHost}');
+    debugPrint('  명령어: $command');
+    debugPrint('═══════════════════════════════════════════════════════');
 
     if (_commandSocket != null) {
       try {
         _commandSocket!.add(utf8.encode(command));
-        print('[$timestamp] ✅ 로봇 명령어 전송 성공: $command');
-        print('  → ${config.robotHost}:${config.robotPort}로 전송됨');
+        debugPrint('[$timestamp] ✅ 로봇 명령어 전송 성공: $command');
+        debugPrint('  → ${config.robotHost}:${config.robotPort}로 전송됨');
       } catch (e) {
-        print('[$timestamp] ❌ 로봇 명령어 전송 실패: $e');
-        print('  명령어: $command');
+        debugPrint('[$timestamp] ❌ 로봇 명령어 전송 실패: $e');
+        debugPrint('  명령어: $command');
       }
     } else {
-      print('[$timestamp] ⚠️  로봇 소켓이 연결되지 않음');
-      print('  명령어: $command (전송되지 않음)');
+      debugPrint('[$timestamp] ⚠️  로봇 소켓이 연결되지 않음');
+      debugPrint('  명령어: $command (전송되지 않음)');
     }
   }
 

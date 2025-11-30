@@ -36,8 +36,8 @@ class _HomePageState extends State<HomePage> {
   bool _isCheckingMoveCommand = false; // MOVE 명령어 체크 중 플래그 (중복 방지)
   bool _hasShownMoveDialog = false; // 팝업이 이미 표시되었는지 추적
 
-  // TCP 통신 서비스
-  final TcpService _tcpService = TcpService();
+  // TCP 통신 서비스 (싱글톤 사용)
+  final TcpService _tcpService = TcpService.instance;
   StreamSubscription<String>? _serverSubscription;
   StreamSubscription<int>? _queueUpdateSubscription;
 
@@ -56,33 +56,39 @@ class _HomePageState extends State<HomePage> {
     _serverSubscription = _tcpService.serverStream.listen((data) {
       final timestamp = DateTime.now().toString().substring(11, 19);
       final originalData = data.trim();
-      
-      print('═══════════════════════════════════════════════════════');
-      print('[$timestamp] 📥 서버로부터 명령어 수신');
-      print('  포트: 6601 (서버)');
-      print('  원본 메시지: "$originalData"');
-      print('  현재 RUNNING 상태: ${_tcpService.isRunning}');
-      print('═══════════════════════════════════════════════════════');
+
+      debugPrint('═══════════════════════════════════════════════════════');
+      debugPrint('[$timestamp] 📥 서버로부터 명령어 수신');
+      debugPrint('  포트: 6601 (서버)');
+      debugPrint('  원본 메시지: "$originalData"');
+      debugPrint('  현재 RUNNING 상태: ${_tcpService.isRunning}');
+      debugPrint('═══════════════════════════════════════════════════════');
 
       // 여러 줄로 나뉘어진 메시지 처리 (각 줄을 개별적으로 처리)
       final lines = originalData.split('\n');
       for (var line in lines) {
         final trimmedLine = line.trim();
         if (trimmedLine.isEmpty) continue;
-        
+
         final upperLine = trimmedLine.toUpperCase();
-        print('[$timestamp] 📋 명령어 라인 처리: "$trimmedLine" (대문자: "$upperLine")');
-        
+        debugPrint(
+          '[$timestamp] 📋 명령어 라인 처리: "$trimmedLine" (대문자: "$upperLine")',
+        );
+
         // RUNNING 상태 확인 및 업데이트
-        if (upperLine.contains('MOVE_START') || upperLine.contains('MOVE START')) {
+        if (upperLine.contains('MOVE_START') ||
+            upperLine.contains('MOVE START')) {
           // MOVE_START_X 명령어: RUNNING 상태 활성화 + 이동 예정 표시
           final oldRunningState = _tcpService.isRunning;
           _tcpService.setRunningState(true);
-          
+
           // MOVE_START_X에서 목적지 바스켓 번호 추출 (X는 0~5, 바스켓 번호는 X+1)
           int? targetBasketNumber;
           int? targetBasketIndexForCommand; // MOVE_X 명령어에서 사용하는 인덱스 (0~5)
-          final moveStartMatch = RegExp(r'MOVE_START[_\s]?(\d+)', caseSensitive: false).firstMatch(upperLine);
+          final moveStartMatch = RegExp(
+            r'MOVE_START[_\s]?(\d+)',
+            caseSensitive: false,
+          ).firstMatch(upperLine);
           if (moveStartMatch != null) {
             final basketIndex = int.tryParse(moveStartMatch.group(1) ?? '');
             if (basketIndex != null) {
@@ -90,88 +96,105 @@ class _HomePageState extends State<HomePage> {
               targetBasketNumber = basketIndex + 1; // 인덱스 0~5를 바스켓 번호 1~6으로 변환
             }
           }
-          
+
           // MOVE_START를 받으면 큐에서 해당 MOVE 명령어 확실하게 제거
           if (targetBasketIndexForCommand != null) {
             _tcpService.removeMoveCommand(targetBasketIndexForCommand);
           }
-          
+
           // 1번 바스켓에 이동 예정 정보 설정 및 목적지 바스켓 예약 상태 설정
-          if (targetBasketNumber != null && targetBasketNumber >= 2 && targetBasketNumber <= 6) {
+          if (targetBasketNumber != null &&
+              targetBasketNumber >= 2 &&
+              targetBasketNumber <= 6) {
             final targetBasketIndex = targetBasketNumber - 1;
             setState(() {
               // 1번 바스켓에 이동 예정 정보 설정
-              _basketStates[0] = _basketStates[0].copyWith(pendingMoveTo: targetBasketNumber);
+              _basketStates[0] = _basketStates[0].copyWith(
+                pendingMoveTo: targetBasketNumber,
+              );
               // 목적지 바스켓을 예약 상태로 설정 (예약되어 있다는 의미)
-              _basketStates[targetBasketIndex] = _basketStates[targetBasketIndex]
-                  .copyWith(isWaiting: true);
+              _basketStates[targetBasketIndex] =
+                  _basketStates[targetBasketIndex].copyWith(isWaiting: true);
             });
-            print('[$timestamp] 🔴 MOVE_START 명령어 수신: ${targetBasketNumber}번 바스켓으로 이동 예정');
-            print('  - ${targetBasketNumber}번 바스켓: 예약 상태로 설정');
+            debugPrint(
+              '[$timestamp] 🔴 MOVE_START 명령어 수신: $targetBasketNumber번 바스켓으로 이동 예정',
+            );
+            debugPrint('  - $targetBasketNumber번 바스켓: 예약 상태로 설정');
           } else {
-            print('[$timestamp] 🔴 MOVE_START 명령어 수신 (목적지 바스켓 번호 파싱 실패)');
+            debugPrint('[$timestamp] 🔴 MOVE_START 명령어 수신 (목적지 바스켓 번호 파싱 실패)');
           }
-          
-          print('  - RUNNING 상태 변경: $oldRunningState → true');
-          print('  - 명령어 전송 중단 (큐에 추가만 가능, 전송 불가)');
-          print('  - 큐에 대기 중인 명령어: ${_tcpService.queueLength}개');
+
+          debugPrint('  - RUNNING 상태 변경: $oldRunningState → true');
+          debugPrint('  - 명령어 전송 중단 (큐에 추가만 가능, 전송 불가)');
+          debugPrint('  - 큐에 대기 중인 명령어: ${_tcpService.queueLength}개');
           // 처리 중 상태도 해제 (MOVE_START를 받았으므로 명령어 처리가 시작됨)
           _tcpService.setProcessingState(false);
-        } else if (upperLine.contains('INPUT_START') || upperLine.contains('INPUT START')) {
+        } else if (upperLine.contains('INPUT_START') ||
+            upperLine.contains('INPUT START')) {
           // INPUT_START_X 명령어: RUNNING 상태 활성화
           final oldRunningState = _tcpService.isRunning;
           _tcpService.setRunningState(true);
-          print('[$timestamp] 🔴 INPUT_START 명령어 수신');
-          print('  - RUNNING 상태 변경: $oldRunningState → true');
-          print('  - 명령어 전송 중단 (큐에 추가만 가능, 전송 불가)');
-          print('  - 큐에 대기 중인 명령어: ${_tcpService.queueLength}개');
+          debugPrint('[$timestamp] 🔴 INPUT_START 명령어 수신');
+          debugPrint('  - RUNNING 상태 변경: $oldRunningState → true');
+          debugPrint('  - 명령어 전송 중단 (큐에 추가만 가능, 전송 불가)');
+          debugPrint('  - 큐에 대기 중인 명령어: ${_tcpService.queueLength}개');
           // 처리 중 상태도 해제 (INPUT_START를 받았으므로 명령어 처리가 시작됨)
           _tcpService.setProcessingState(false);
-        } else if (upperLine.contains('INPUT_END') || upperLine.contains('INPUT END')) {
+        } else if (upperLine.contains('INPUT_END') ||
+            upperLine.contains('INPUT END')) {
           // INPUT_END_X 명령어: 1번 바스켓 채우기 + RUNNING 해제
           final oldRunningState = _tcpService.isRunning;
           final queueLengthBefore = _tcpService.queueLength;
           _tcpService.setRunningState(false);
-          print('[$timestamp] 📥 INPUT_END 명령어 수신: "$trimmedLine"');
-          print('  - RUNNING 상태 변경: $oldRunningState → false');
-          print('  - 1번 바스켓 채우기 처리 시작');
-          print('  - 명령어 전송 재개 가능');
-          print('  - 큐에 대기 중인 명령어: $queueLengthBefore개');
-          print('  - 큐 처리 재개 중...');
+          debugPrint('[$timestamp] 📥 INPUT_END 명령어 수신: "$trimmedLine"');
+          debugPrint('  - RUNNING 상태 변경: $oldRunningState → false');
+          debugPrint('  - 1번 바스켓 채우기 처리 시작');
+          debugPrint('  - 명령어 전송 재개 가능');
+          debugPrint('  - 큐에 대기 중인 명령어: $queueLengthBefore개');
+          debugPrint('  - 큐 처리 재개 중...');
           // 큐 처리 재개
           _tcpService.processQueue();
-          print('  - 큐 처리 재개 완료');
+          debugPrint('  - 큐 처리 재개 완료');
           // 1번 바스켓 채우기
           _handleInputEnd();
-        } else if (upperLine.contains('MOVE_MOTION_START') || upperLine.contains('MOVE MOTION START')) {
+        } else if (upperLine.contains('MOVE_MOTION_START') ||
+            upperLine.contains('MOVE MOTION START')) {
           // MOVE_MOTION_START 명령어: 1번 바스켓 이동중, 목적지 바스켓 곧 도착 예정
           final pendingMoveTo = _basketStates[0].pendingMoveTo;
-          if (pendingMoveTo != null && pendingMoveTo >= 2 && pendingMoveTo <= 6) {
+          if (pendingMoveTo != null &&
+              pendingMoveTo >= 2 &&
+              pendingMoveTo <= 6) {
             final targetBasketIndex = pendingMoveTo - 1;
             setState(() {
               // 1번 바스켓을 이동중 상태로 설정 (메뉴와 시간 정보는 유지)
               _basketStates[0] = _basketStates[0].copyWith(isMoving: true);
               // 목적지 바스켓을 곧 도착 예정 상태로 설정 (메뉴는 아직 없음)
-              _basketStates[targetBasketIndex] = _basketStates[targetBasketIndex]
-                  .copyWith(isArrivingSoon: true, isWaiting: false);
+              _basketStates[targetBasketIndex] =
+                  _basketStates[targetBasketIndex].copyWith(
+                    isArrivingSoon: true,
+                    isWaiting: false,
+                  );
             });
-            print('[$timestamp] 🚚 MOVE_MOTION_START 명령어 수신');
-            print('  - 1번 바스켓: 이동중 상태로 변경 (메뉴/시간 정보 유지)');
-            print('  - ${pendingMoveTo}번 바스켓: 곧 도착 예정 상태로 변경');
+            debugPrint('[$timestamp] 🚚 MOVE_MOTION_START 명령어 수신');
+            debugPrint('  - 1번 바스켓: 이동중 상태로 변경 (메뉴/시간 정보 유지)');
+            debugPrint('  - $pendingMoveTo번 바스켓: 곧 도착 예정 상태로 변경');
           } else {
-            print('[$timestamp] ⚠️  MOVE_MOTION_START 수신했지만 이동 예정 정보가 없음');
-            print('  - pendingMoveTo: $pendingMoveTo');
+            debugPrint('[$timestamp] ⚠️  MOVE_MOTION_START 수신했지만 이동 예정 정보가 없음');
+            debugPrint('  - pendingMoveTo: $pendingMoveTo');
           }
-        } else if (upperLine.contains('MOVE_MOTION_END') || upperLine.contains('MOVE MOTION END')) {
+        } else if (upperLine.contains('MOVE_MOTION_END') ||
+            upperLine.contains('MOVE MOTION END')) {
           // MOVE_MOTION_END 명령어: 목적지 바스켓에 메뉴 도착, 1번 바스켓은 사용불가
           final pendingMoveTo = _basketStates[0].pendingMoveTo;
-          if (pendingMoveTo != null && pendingMoveTo >= 2 && pendingMoveTo <= 6) {
+          if (pendingMoveTo != null &&
+              pendingMoveTo >= 2 &&
+              pendingMoveTo <= 6) {
             final targetBasketIndex = pendingMoveTo - 1;
             setState(() {
               // 1번 바스켓의 메뉴 정보를 목적지 바스켓으로 이동
               final menuFromBasket1 = _basketStates[0].selectedMenu;
               final cookTimeFromBasket1 = _basketStates[0].cookRemainingTime;
-              
+
               if (menuFromBasket1 != null) {
                 // 목적지 바스켓에 메뉴 온전히 이동 (정상적으로 표시)
                 _basketStates[targetBasketIndex] = BasketState(
@@ -183,7 +206,7 @@ class _HomePageState extends State<HomePage> {
                   isMoving: false,
                   isArrivingSoon: false,
                 );
-                
+
                 // 1번 바스켓은 사용불가 상태 (바스켓이 돌아오는 중)
                 _basketStates[0] = BasketState(
                   basketNumber: 1,
@@ -193,23 +216,24 @@ class _HomePageState extends State<HomePage> {
                 );
               }
             });
-            print('[$timestamp] 📦 MOVE_MOTION_END 명령어 수신');
-            print('  - ${pendingMoveTo}번 바스켓: 메뉴 도착 완료 (정상 표시)');
-            print('  - 1번 바스켓: 사용불가 상태 (바스켓이 돌아오는 중)');
+            debugPrint('[$timestamp] 📦 MOVE_MOTION_END 명령어 수신');
+            debugPrint('  - $pendingMoveTo번 바스켓: 메뉴 도착 완료 (정상 표시)');
+            debugPrint('  - 1번 바스켓: 사용불가 상태 (바스켓이 돌아오는 중)');
           } else {
-            print('[$timestamp] ⚠️  MOVE_MOTION_END 수신했지만 이동 예정 정보가 없음');
+            debugPrint('[$timestamp] ⚠️  MOVE_MOTION_END 수신했지만 이동 예정 정보가 없음');
           }
-        } else if (upperLine.contains('MOVE_END') || upperLine.contains('MOVE END')) {
+        } else if (upperLine.contains('MOVE_END') ||
+            upperLine.contains('MOVE END')) {
           // MOVE_END 명령어: RUNNING 해제 + 1번 바스켓 사용불가 해제 (비어있음으로)
           final oldRunningState = _tcpService.isRunning;
           final queueLengthBefore = _tcpService.queueLength;
-          
+
           _tcpService.setRunningState(false);
-          print('[$timestamp] 🟢 MOVE_END 명령어 수신');
-          print('  - RUNNING 상태 변경: $oldRunningState → false');
-          print('  - 명령어 전송 재개 가능');
-          print('  - 큐에 대기 중인 명령어: $queueLengthBefore개');
-          
+          debugPrint('[$timestamp] 🟢 MOVE_END 명령어 수신');
+          debugPrint('  - RUNNING 상태 변경: $oldRunningState → false');
+          debugPrint('  - 명령어 전송 재개 가능');
+          debugPrint('  - 큐에 대기 중인 명령어: $queueLengthBefore개');
+
           // 1번 바스켓 사용불가 해제 (비어있음으로 변경)
           setState(() {
             _basketStates[0] = BasketState(
@@ -217,64 +241,76 @@ class _HomePageState extends State<HomePage> {
               isUnavailable: false, // 사용불가 해제
             );
           });
-          print('  - 1번 바스켓: 사용불가 해제 (비어있음으로 변경)');
-          
+          debugPrint('  - 1번 바스켓: 사용불가 해제 (비어있음으로 변경)');
+
           // 1번 바스켓이 비어지는 순간: 초벌이 완료되어 있고 아직 이동하지 않았다면 팝업 표시 (한 번만)
           // 단, 사용불가 상태가 아닐 때만
-          if (!_manualFryerState.isEmpty && 
-              !_manualFryerState.isPreFrying && 
+          if (!_manualFryerState.isEmpty &&
+              !_manualFryerState.isPreFrying &&
               _manualFryerState.selectedMenu != null &&
               _basketStates[0].isEmpty &&
               !_basketStates[0].isUnavailable &&
               !_hasShownMoveDialog) {
             // 초벌 완료 상태이고 1번 바스켓이 비어있고 사용불가가 아니면 팝업 표시
             _shouldShowMoveDialog = true;
-            print('  - 초벌 완료 상태: 1번 바스켓이 비어지므로 팝업 표시 예정');
+            debugPrint('  - 초벌 완료 상태: 1번 바스켓이 비어지므로 팝업 표시 예정');
           }
-          
-          print('  - 큐 처리 재개 중...');
+
+          debugPrint('  - 큐 처리 재개 중...');
           // 큐 처리 재개
           _tcpService.processQueue();
-          print('  - 큐 처리 재개 완료');
-        } else if (upperLine.contains('OUTPUT_START') || upperLine.contains('OUTPUT START')) {
+          debugPrint('  - 큐 처리 재개 완료');
+        } else if (upperLine.contains('OUTPUT_START') ||
+            upperLine.contains('OUTPUT START')) {
           // OUTPUT_START_X 명령어: RUNNING 상태 활성화 + 해당 슬롯을 꺼내기중으로 표시
           final oldRunningState = _tcpService.isRunning;
           _tcpService.setRunningState(true);
-          
+
           int? basketIndex;
-          final outputStartMatch = RegExp(r'OUTPUT_START[_\s]?(\d+)', caseSensitive: false).firstMatch(upperLine);
+          final outputStartMatch = RegExp(
+            r'OUTPUT_START[_\s]?(\d+)',
+            caseSensitive: false,
+          ).firstMatch(upperLine);
           if (outputStartMatch != null) {
             final index = int.tryParse(outputStartMatch.group(1) ?? '');
             if (index != null && index >= 0 && index < _basketStates.length) {
               basketIndex = index;
             }
           }
-          
+
           if (basketIndex != null) {
             final index = basketIndex; // null 체크 후 로컬 변수로 사용
             setState(() {
-              _basketStates[index] = _basketStates[index].copyWith(isOutputting: true);
+              _basketStates[index] = _basketStates[index].copyWith(
+                isOutputting: true,
+              );
             });
-            print('[$timestamp] 📤 OUTPUT_START 명령어 수신: ${index + 1}번 바스켓 꺼내기중');
-            print('  - RUNNING 상태 변경: $oldRunningState → true');
+            debugPrint(
+              '[$timestamp] 📤 OUTPUT_START 명령어 수신: ${index + 1}번 바스켓 꺼내기중',
+            );
+            debugPrint('  - RUNNING 상태 변경: $oldRunningState → true');
           } else {
-            print('[$timestamp] ⚠️  OUTPUT_START 명령어 수신 (바스켓 번호 파싱 실패)');
-            print('  - RUNNING 상태 변경: $oldRunningState → true');
+            debugPrint('[$timestamp] ⚠️  OUTPUT_START 명령어 수신 (바스켓 번호 파싱 실패)');
+            debugPrint('  - RUNNING 상태 변경: $oldRunningState → true');
           }
-          
+
           // 처리 중 상태도 해제 (OUTPUT_START를 받았으므로 명령어 처리가 시작됨)
           _tcpService.setProcessingState(false);
-        } else if (upperLine.contains('OUTPUT_MOTION_END') || upperLine.contains('OUTPUT MOTION END')) {
+        } else if (upperLine.contains('OUTPUT_MOTION_END') ||
+            upperLine.contains('OUTPUT MOTION END')) {
           // OUTPUT_MOTION_END_X 명령어: 꺼내기중 상태 해제
           int? basketIndex;
-          final outputMotionEndMatch = RegExp(r'OUTPUT_MOTION_END[_\s]?(\d+)', caseSensitive: false).firstMatch(upperLine);
+          final outputMotionEndMatch = RegExp(
+            r'OUTPUT_MOTION_END[_\s]?(\d+)',
+            caseSensitive: false,
+          ).firstMatch(upperLine);
           if (outputMotionEndMatch != null) {
             final index = int.tryParse(outputMotionEndMatch.group(1) ?? '');
             if (index != null && index >= 0 && index < _basketStates.length) {
               basketIndex = index;
             }
           }
-          
+
           if (basketIndex != null) {
             // 특정 바스켓의 꺼내기중 상태 해제하고 정리중 상태로 변경
             final index = basketIndex; // null 체크 후 로컬 변수로 사용
@@ -284,7 +320,9 @@ class _HomePageState extends State<HomePage> {
                 isInitializing: true,
               );
             });
-            print('[$timestamp] ✅ OUTPUT_MOTION_END 명령어 수신: ${index + 1}번 바스켓 정리중');
+            debugPrint(
+              '[$timestamp] ✅ OUTPUT_MOTION_END 명령어 수신: ${index + 1}번 바스켓 정리중',
+            );
           } else {
             // 바스켓 번호가 없으면 모든 바스켓에서 꺼내기중 상태 해제하고 정리중 상태로 변경
             setState(() {
@@ -297,27 +335,31 @@ class _HomePageState extends State<HomePage> {
                 }
               }
             });
-            print('[$timestamp] ✅ OUTPUT_MOTION_END 명령어 수신: 모든 바스켓 정리중');
+            debugPrint('[$timestamp] ✅ OUTPUT_MOTION_END 명령어 수신: 모든 바스켓 정리중');
           }
-        } else if (upperLine.contains('OUTPUT_END') || upperLine.contains('OUTPUT END')) {
+        } else if (upperLine.contains('OUTPUT_END') ||
+            upperLine.contains('OUTPUT END')) {
           // OUTPUT_END_X 명령어: RUNNING 해제 + 해당 슬롯을 비어있음으로 초기화
           final oldRunningState = _tcpService.isRunning;
           final queueLengthBefore = _tcpService.queueLength;
           _tcpService.setRunningState(false);
-          
+
           int? basketIndex;
-          final outputEndMatch = RegExp(r'OUTPUT_END[_\s]?(\d+)', caseSensitive: false).firstMatch(upperLine);
+          final outputEndMatch = RegExp(
+            r'OUTPUT_END[_\s]?(\d+)',
+            caseSensitive: false,
+          ).firstMatch(upperLine);
           if (outputEndMatch != null) {
             final index = int.tryParse(outputEndMatch.group(1) ?? '');
             if (index != null && index >= 0 && index < _basketStates.length) {
               basketIndex = index;
             }
           }
-          
+
           if (basketIndex != null) {
             final index = basketIndex; // null 체크 후 로컬 변수로 사용
             final wasBasket1Empty = _basketStates[0].isEmpty;
-            
+
             setState(() {
               // 해당 슬롯을 비어있음으로 초기화
               _basketStates[index] = BasketState(
@@ -326,44 +368,48 @@ class _HomePageState extends State<HomePage> {
                 isInitializing: false,
               );
             });
-            print('[$timestamp] ✅ OUTPUT_END 명령어 수신: ${index + 1}번 바스켓 비어있음으로 초기화');
-            print('  - RUNNING 상태 변경: $oldRunningState → false');
-            print('  - 명령어 전송 재개 가능');
-            print('  - 큐에 대기 중인 명령어: $queueLengthBefore개');
-            
+            debugPrint(
+              '[$timestamp] ✅ OUTPUT_END 명령어 수신: ${index + 1}번 바스켓 비어있음으로 초기화',
+            );
+            debugPrint('  - RUNNING 상태 변경: $oldRunningState → false');
+            debugPrint('  - 명령어 전송 재개 가능');
+            debugPrint('  - 큐에 대기 중인 명령어: $queueLengthBefore개');
+
             // 1번 바스켓이 비어지는 순간: 초벌이 완료되어 있고 아직 이동하지 않았다면 팝업 표시 (한 번만)
             // 단, 사용불가 상태가 아닐 때만
-            if (index == 0 && !wasBasket1Empty && 
-                !_manualFryerState.isEmpty && 
-                !_manualFryerState.isPreFrying && 
+            if (index == 0 &&
+                !wasBasket1Empty &&
+                !_manualFryerState.isEmpty &&
+                !_manualFryerState.isPreFrying &&
                 _manualFryerState.selectedMenu != null &&
                 _basketStates[0].isEmpty &&
                 !_basketStates[0].isUnavailable &&
                 !_hasShownMoveDialog) {
               // 1번 바스켓이 방금 비어졌고, 초벌 완료 상태이고 사용불가가 아니면 팝업 표시
               _shouldShowMoveDialog = true;
-              print('  - 초벌 완료 상태: 1번 바스켓이 비어지므로 팝업 표시 예정');
+              debugPrint('  - 초벌 완료 상태: 1번 바스켓이 비어지므로 팝업 표시 예정');
             }
-            
-            print('  - 큐 처리 재개 중...');
+
+            debugPrint('  - 큐 처리 재개 중...');
             // 큐 처리 재개
             _tcpService.processQueue();
-            print('  - 큐 처리 재개 완료');
+            debugPrint('  - 큐 처리 재개 완료');
           } else {
-            print('[$timestamp] ⚠️  OUTPUT_END 명령어 수신 (바스켓 번호 파싱 실패)');
-            print('  - RUNNING 상태 변경: $oldRunningState → false');
-            print('  - 큐 처리 재개 중...');
+            debugPrint('[$timestamp] ⚠️  OUTPUT_END 명령어 수신 (바스켓 번호 파싱 실패)');
+            debugPrint('  - RUNNING 상태 변경: $oldRunningState → false');
+            debugPrint('  - 큐 처리 재개 중...');
             _tcpService.processQueue();
-            print('  - 큐 처리 재개 완료');
+            debugPrint('  - 큐 처리 재개 완료');
           }
-        } else if (upperLine.contains('MOTION_END') || upperLine.contains('MOTION END')) {
+        } else if (upperLine.contains('MOTION_END') ||
+            upperLine.contains('MOTION END')) {
           // MOTION_END 명령어: RUNNING 해제하지 않음 (단순 수신만)
-          print('[$timestamp] 📋 MOTION_END 명령어 수신: "$trimmedLine"');
-          print('  - RUNNING 상태 유지 (변경 없음)');
-          print('  - 현재 RUNNING 상태: ${_tcpService.isRunning}');
+          debugPrint('[$timestamp] 📋 MOTION_END 명령어 수신: "$trimmedLine"');
+          debugPrint('  - RUNNING 상태 유지 (변경 없음)');
+          debugPrint('  - 현재 RUNNING 상태: ${_tcpService.isRunning}');
         } else {
           // 기타 명령어 수신
-          print('[$timestamp] 📋 기타 명령어 수신: "$trimmedLine"');
+          debugPrint('[$timestamp] 📋 기타 명령어 수신: "$trimmedLine"');
         }
       }
     });
@@ -421,7 +467,7 @@ class _HomePageState extends State<HomePage> {
               }
               updated = true;
             }
-            
+
             // 오버쿡 시간 증가
             int newOvercookTime = basket.overcookTime;
             bool newIsOvercooking = basket.isOvercooking;
@@ -433,53 +479,67 @@ class _HomePageState extends State<HomePage> {
                 newOvercookTime = basket.overcookTime + 1;
               }
               updated = true;
-              
+
               // 오버쿡 퍼센트 체크 및 E_OUTPUT 명령어 추가 (생산량 위주 모드에서만)
               if (basket.selectedMenu != null && newIsOvercooking) {
-                final totalCookTime = basket.selectedMenu!.cookTime; // 총 조리시간 (초벌 포함)
-                final overcookPercent = ConfigService.getGlobalOvercookTimePercent();
-                final overcookLimit = (totalCookTime * overcookPercent / 100).round();
-                
+                final totalCookTime =
+                    basket.selectedMenu!.cookTime; // 총 조리시간 (초벌 포함)
+                final overcookPercent =
+                    ConfigService.getGlobalOvercookTimePercent();
+                final overcookLimit = (totalCookTime * overcookPercent / 100)
+                    .round();
+
                 // 생산량 위주 모드에서만 E_OUTPUT 명령어 추가
                 final isProductionMode = ConfigService.isProductionMode();
-                
+
                 if (newOvercookTime >= overcookLimit && isProductionMode) {
                   // E_OUTPUT 명령어를 큐 맨 앞에 추가
                   final basketNumber = i + 1;
-                  final emergencyCommand = 'E_OUTPUT_${i}';
-                  
+                  final emergencyCommand = 'E_OUTPUT_$i';
+
                   // 큐에 이미 같은 E_OUTPUT 명령어가 있는지 확인
                   final queueCommands = _tcpService.queueCommands;
-                  final alreadyInQueue = queueCommands.contains(emergencyCommand);
-                  
+                  final alreadyInQueue = queueCommands.contains(
+                    emergencyCommand,
+                  );
+
                   if (!alreadyInQueue) {
                     // 기존 OUTPUT 명령어 제거 (같은 바스켓)
                     _tcpService.removeOutputCommand(i);
-                    
-                    print('═══════════════════════════════════════════════════════');
-                    print('🚨 오버쿡 한계 도달: E_OUTPUT 명령어 이머전시 추가');
-                    print('  - 바스켓 번호: $basketNumber');
-                    print('  - 메뉴: ${basket.selectedMenu?.name}');
-                    print('  - 총 조리시간: ${totalCookTime}초');
-                    print('  - 오버쿡 퍼센트: ${overcookPercent}%');
-                    print('  - 오버쿡 한계: ${overcookLimit}초');
-                    print('  - 현재 오버쿡 시간: ${newOvercookTime}초');
-                    print('  - 운영 모드: 생산량 위주');
-                    print('  - 기존 OUTPUT_${i} 명령어 제거됨');
-                    print('  - 전송할 명령어: $emergencyCommand');
-                    print('═══════════════════════════════════════════════════════');
-                    
-                    _tcpService.sendEmergencyMessage(emergencyCommand).then((result) {
+
+                    debugPrint(
+                      '═══════════════════════════════════════════════════════',
+                    );
+                    debugPrint('🚨 오버쿡 한계 도달: E_OUTPUT 명령어 이머전시 추가');
+                    debugPrint('  - 바스켓 번호: $basketNumber');
+                    debugPrint('  - 메뉴: ${basket.selectedMenu?.name}');
+                    debugPrint('  - 총 조리시간: $totalCookTime초');
+                    debugPrint('  - 오버쿡 퍼센트: $overcookPercent%');
+                    debugPrint('  - 오버쿡 한계: $overcookLimit초');
+                    debugPrint('  - 현재 오버쿡 시간: $newOvercookTime초');
+                    debugPrint('  - 운영 모드: 생산량 위주');
+                    debugPrint('  - 기존 OUTPUT_$i 명령어 제거됨');
+                    debugPrint('  - 전송할 명령어: $emergencyCommand');
+                    debugPrint(
+                      '═══════════════════════════════════════════════════════',
+                    );
+
+                    _tcpService.sendEmergencyMessage(emergencyCommand).then((
+                      result,
+                    ) {
                       if (result) {
-                        print('  ✅ E_OUTPUT 명령어 큐 맨 앞에 추가 성공');
+                        debugPrint('  ✅ E_OUTPUT 명령어 큐 맨 앞에 추가 성공');
                       } else {
-                        print('  ❌ E_OUTPUT 명령어 큐 추가 실패');
+                        debugPrint('  ❌ E_OUTPUT 명령어 큐 추가 실패');
                       }
                     });
                   }
-                } else if (newOvercookTime >= overcookLimit && !isProductionMode) {
+                } else if (newOvercookTime >= overcookLimit &&
+                    !isProductionMode) {
                   // 조리시간 준수 모드에서는 E_OUTPUT을 생성하지 않음
-                  print('  ℹ️  조리시간 준수 모드: E_OUTPUT 명령어 생성 안 함 (오버쿡 시간: ${newOvercookTime}초)');
+                  debugPrint(
+                    '  ℹ️  조리시간 준수 모드: E_OUTPUT 명령어 생성 안 함 (오버쿡 시간: $newOvercookTime초)',
+                  );
                 }
               }
             }
@@ -493,33 +553,39 @@ class _HomePageState extends State<HomePage> {
                 isOvercooking: newIsOvercooking,
                 overcookTime: newOvercookTime,
               );
-              
+
               // 조리 시간이 끝나면 OUTPUT 명령어 자동 추가 (1~6번 바스켓만, 1번 바스켓은 제외하지 않음)
               if (cookTimeJustFinished && basket.selectedMenu != null) {
                 final basketNumber = i + 1; // 바스켓 번호 (1~6)
-                final outputCommand = 'OUTPUT_${i}'; // 인덱스 0~5 사용
-                
+                final outputCommand = 'OUTPUT_$i'; // 인덱스 0~5 사용
+
                 // 큐에 이미 같은 OUTPUT 명령어가 있는지 확인 (중복 방지)
                 final queueCommands = _tcpService.queueCommands;
                 final alreadyInQueue = queueCommands.contains(outputCommand);
-                
+
                 if (!alreadyInQueue) {
-                  print('═══════════════════════════════════════════════════════');
-                  print('🍗 조리 완료: OUTPUT 명령어 자동 추가');
-                  print('  - 바스켓 번호: $basketNumber');
-                  print('  - 메뉴: ${basket.selectedMenu?.name}');
-                  print('  - 전송할 명령어: $outputCommand');
-                  print('═══════════════════════════════════════════════════════');
-                  
+                  debugPrint(
+                    '═══════════════════════════════════════════════════════',
+                  );
+                  debugPrint('🍗 조리 완료: OUTPUT 명령어 자동 추가');
+                  debugPrint('  - 바스켓 번호: $basketNumber');
+                  debugPrint('  - 메뉴: ${basket.selectedMenu?.name}');
+                  debugPrint('  - 전송할 명령어: $outputCommand');
+                  debugPrint(
+                    '═══════════════════════════════════════════════════════',
+                  );
+
                   _tcpService.sendMessage(outputCommand).then((result) {
                     if (result) {
-                      print('  ✅ OUTPUT 명령어 큐 추가 성공');
+                      debugPrint('  ✅ OUTPUT 명령어 큐 추가 성공');
                     } else {
-                      print('  ❌ OUTPUT 명령어 큐 추가 실패 (중복 또는 기타 이유)');
+                      debugPrint('  ❌ OUTPUT 명령어 큐 추가 실패 (중복 또는 기타 이유)');
                     }
                   });
                 } else {
-                  print('⚠️  OUTPUT 명령어 중복 방지: 큐에 이미 "$outputCommand" 명령어가 있음');
+                  debugPrint(
+                    '⚠️  OUTPUT 명령어 중복 방지: 큐에 이미 "$outputCommand" 명령어가 있음',
+                  );
                 }
               }
             }
@@ -565,17 +631,17 @@ class _HomePageState extends State<HomePage> {
             );
 
             // 초벌 완료 시: 1번 바스켓이 비어있고 사용불가가 아닐 때만 팝업 표시 (한 번만)
-            if (preFryJustCompleted && 
-                _basketStates[0].isEmpty && 
+            if (preFryJustCompleted &&
+                _basketStates[0].isEmpty &&
                 !_basketStates[0].isUnavailable &&
                 !_hasShownMoveDialog) {
               // 1번 바스켓이 비어있고 사용불가가 아니면 팝업 표시
               _shouldShowMoveDialog = true;
             }
-            
+
             // 1번 바스켓이 비어있고 사용불가가 아니고 초벌이 완료되어 있으면 팝업 표시 (한 번만)
-            if (!_manualFryerState.isEmpty && 
-                !_manualFryerState.isPreFrying && 
+            if (!_manualFryerState.isEmpty &&
+                !_manualFryerState.isPreFrying &&
                 _manualFryerState.selectedMenu != null &&
                 _basketStates[0].isEmpty &&
                 !_basketStates[0].isUnavailable &&
@@ -639,7 +705,7 @@ class _HomePageState extends State<HomePage> {
 
   Future<void> _moveToAvailableBasket() async {
     if (_manualFryerState.selectedMenu == null) {
-      print('⚠️  _moveToAvailableBasket: 수동 조리 튀김기에 메뉴가 없음');
+      debugPrint('⚠️  _moveToAvailableBasket: 수동 조리 튀김기에 메뉴가 없음');
       return;
     }
 
@@ -651,46 +717,48 @@ class _HomePageState extends State<HomePage> {
 
     // 1번 바스켓 상태 확인
     final isBasket1Empty = _basketStates[0].isEmpty;
-    print('🔍 바스켓 이동 로직 시작:');
-    print('  - 선택된 메뉴: ${selectedMenu.name}');
-    print('  - 테스트 메뉴: $isTestMenu');
-    print('  - 1번 바스켓 비어있음: $isBasket1Empty');
+    debugPrint('🔍 바스켓 이동 로직 시작:');
+    debugPrint('  - 선택된 메뉴: ${selectedMenu.name}');
+    debugPrint('  - 테스트 메뉴: $isTestMenu');
+    debugPrint('  - 1번 바스켓 비어있음: $isBasket1Empty');
 
     // 1번 바스켓이 비어있으면 1번으로 이동
     if (isBasket1Empty) {
       targetBasketIndex = 0;
-      print('  - 목적지: 1번 바스켓 (비어있음)');
+      debugPrint('  - 목적지: 1번 바스켓 (비어있음)');
     } else {
       // 1번 바스켓이 차있으면 2~6번 바스켓 중 비어있는 것 중 가장 큰 번호 찾기
-      print('  - 1번 바스켓이 차있음, 다른 바스켓 찾는 중...');
+      debugPrint('  - 1번 바스켓이 차있음, 다른 바스켓 찾는 중...');
       for (int i = _basketStates.length - 1; i >= 1; i--) {
         if (_basketStates[i].isEmpty) {
           targetBasketIndex = i;
-          print('  - 찾은 목적지: ${i + 1}번 바스켓 (비어있음)');
+          debugPrint('  - 찾은 목적지: ${i + 1}번 바스켓 (비어있음)');
           break;
         }
       }
       if (targetBasketIndex == -1) {
-        print('  - ⚠️  이동할 바스켓을 찾을 수 없음 (모든 바스켓이 차있음)');
+        debugPrint('  - ⚠️  이동할 바스켓을 찾을 수 없음 (모든 바스켓이 차있음)');
       }
     }
 
     // 이동할 바스켓이 없으면 리턴
     if (targetBasketIndex == -1) {
-      print('❌ 이동할 바스켓이 없어 함수 종료');
+      debugPrint('❌ 이동할 바스켓이 없어 함수 종료');
       return;
     }
 
     final targetBasketNumber = targetBasketIndex + 1;
     final isBasket1Full = !isBasket1Empty;
 
-    print('  - 최종 목적지: $targetBasketNumber번 바스켓 (인덱스: $targetBasketIndex)');
-    print('  - 1번 바스켓 차있음: $isBasket1Full');
+    debugPrint(
+      '  - 최종 목적지: $targetBasketNumber번 바스켓 (인덱스: $targetBasketIndex)',
+    );
+    debugPrint('  - 1번 바스켓 차있음: $isBasket1Full');
 
     setState(() {
       if (targetBasketIndex == 0) {
         // 1번 바스켓으로 바로 이동 (기존 로직)
-        print('  - 1번 바스켓으로 바로 이동');
+        debugPrint('  - 1번 바스켓으로 바로 이동');
         _basketStates[0] = BasketState(
           basketNumber: 1,
           selectedMenu: selectedMenu,
@@ -702,14 +770,14 @@ class _HomePageState extends State<HomePage> {
 
         // 수동 조리 튀김기 초기화
         _manualFryerState = FryerState();
-        
+
         // 1번 바스켓이 채워진 후 MOVE 명령어 자동 체크
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _checkAndAddMoveCommand();
         });
       } else {
         // 다른 바스켓으로 이동 예정
-        print('  - $targetBasketNumber번 바스켓으로 이동 예정');
+        debugPrint('  - $targetBasketNumber번 바스켓으로 이동 예정');
         // 목적지 바스켓을 대기중 상태로 설정
         _basketStates[targetBasketIndex] = _basketStates[targetBasketIndex]
             .copyWith(isWaiting: true);
@@ -725,12 +793,12 @@ class _HomePageState extends State<HomePage> {
 
     // 테스트 메뉴인 경우 INPUT_0 명령어 전송
     if (isTestMenu) {
-      print('  - 테스트 메뉴: INPUT_0 명령어 전송');
+      debugPrint('  - 테스트 메뉴: INPUT_0 명령어 전송');
       _tcpService.sendMessage('INPUT_0');
     } else {
       // setState() 후 실제 바스켓 상태 다시 확인
       final actualBasket1Full = !_basketStates[0].isEmpty;
-      
+
       // 다른 바스켓(2~6번) 중 하나라도 비어있는지 확인 (큰 번호부터 찾기)
       bool hasEmptyOtherBasket = false;
       int emptyBasketIndex = -1;
@@ -741,18 +809,20 @@ class _HomePageState extends State<HomePage> {
           break;
         }
       }
-      
-      print('  - 일반 메뉴: 명령어 전송 조건 확인 (setState 후)');
-      print('    - 실제 1번 바스켓 차있음: $actualBasket1Full');
-      print('    - 다른 바스켓(2~6번) 중 비어있는 바스켓 있음: $hasEmptyOtherBasket');
-      print('    - targetBasketIndex: $targetBasketIndex');
+
+      debugPrint('  - 일반 메뉴: 명령어 전송 조건 확인 (setState 후)');
+      debugPrint('    - 실제 1번 바스켓 차있음: $actualBasket1Full');
+      debugPrint('    - 다른 바스켓(2~6번) 중 비어있는 바스켓 있음: $hasEmptyOtherBasket');
+      debugPrint('    - targetBasketIndex: $targetBasketIndex');
       if (hasEmptyOtherBasket) {
-        print('    - 비어있는 바스켓 인덱스: $emptyBasketIndex (${emptyBasketIndex + 1}번)');
+        debugPrint(
+          '    - 비어있는 바스켓 인덱스: $emptyBasketIndex (${emptyBasketIndex + 1}번)',
+        );
       }
-      
+
       // 1번 바스켓이 비어있으면 바로 이동 (INPUT_END 없이)
       if (!actualBasket1Full && targetBasketIndex == 0) {
-        print('✅ 1번 바스켓이 비어있어 바로 이동 완료');
+        debugPrint('✅ 1번 바스켓이 비어있어 바로 이동 완료');
         // 1번 바스켓이 채워진 후 MOVE 명령어 자동 체크
         WidgetsBinding.instance.addPostFrameCallback((_) {
           _checkAndAddMoveCommand();
@@ -760,14 +830,14 @@ class _HomePageState extends State<HomePage> {
       } else if (actualBasket1Full && hasEmptyOtherBasket) {
         // 1번 바스켓이 차있고 다른 바스켓으로 이동 예정인 경우
         // MOVE 명령어는 _checkAndAddMoveCommand()에서 처리하므로 여기서는 추가하지 않음
-        print('  - 1번 바스켓이 차있어 다른 바스켓으로 이동 예정');
-        print('  - MOVE 명령어는 _checkAndAddMoveCommand()에서 자동으로 추가됨');
+        debugPrint('  - 1번 바스켓이 차있어 다른 바스켓으로 이동 예정');
+        debugPrint('  - MOVE 명령어는 _checkAndAddMoveCommand()에서 자동으로 추가됨');
         // INPUT_END를 받으면 _handleInputEnd()에서 _checkAndAddMoveCommand() 호출됨
       } else {
-        print('⚠️  MOVE 명령어 전송 조건 불만족:');
-        print('    - 실제 1번 바스켓 차있음: $actualBasket1Full');
-        print('    - 다른 바스켓 비어있음: $hasEmptyOtherBasket');
-        print('    - targetBasketIndex: $targetBasketIndex');
+        debugPrint('⚠️  MOVE 명령어 전송 조건 불만족:');
+        debugPrint('    - 실제 1번 바스켓 차있음: $actualBasket1Full');
+        debugPrint('    - 다른 바스켓 비어있음: $hasEmptyOtherBasket');
+        debugPrint('    - targetBasketIndex: $targetBasketIndex');
       }
     }
   }
@@ -776,7 +846,7 @@ class _HomePageState extends State<HomePage> {
   Future<void> _checkAndAddMoveCommand() async {
     // 이미 체크 중이면 리턴 (중복 방지)
     if (_isCheckingMoveCommand) {
-      print('⚠️  MOVE 명령어 체크 중복 방지: 이미 체크 중입니다.');
+      debugPrint('⚠️  MOVE 명령어 체크 중복 방지: 이미 체크 중입니다.');
       return;
     }
 
@@ -785,20 +855,21 @@ class _HomePageState extends State<HomePage> {
     try {
       // 1번 바스켓에 메뉴가 있는지 확인
       final isBasket1Full = !_basketStates[0].isEmpty;
-      
+
       if (!isBasket1Full) {
-        print('🔍 MOVE 명령어 체크: 1번 바스켓이 비어있음 - MOVE 명령어 불필요');
+        debugPrint('🔍 MOVE 명령어 체크: 1번 바스켓이 비어있음 - MOVE 명령어 불필요');
         return;
       }
 
       // 초벌이 끝났는지 확인 (초벌이 끝나야 이동 예정 표시)
       final basket1 = _basketStates[0];
-      final isPreFryComplete = !basket1.isPreFrying && basket1.preFryRemainingTime == 0;
-      
+      final isPreFryComplete =
+          !basket1.isPreFrying && basket1.preFryRemainingTime == 0;
+
       if (!isPreFryComplete) {
-        print('🔍 MOVE 명령어 체크: 초벌이 아직 진행 중 - 이동 예정 표시 안 함');
-        print('  - isPreFrying: ${basket1.isPreFrying}');
-        print('  - preFryRemainingTime: ${basket1.preFryRemainingTime}');
+        debugPrint('🔍 MOVE 명령어 체크: 초벌이 아직 진행 중 - 이동 예정 표시 안 함');
+        debugPrint('  - isPreFrying: ${basket1.isPreFrying}');
+        debugPrint('  - preFryRemainingTime: ${basket1.preFryRemainingTime}');
         return;
       }
 
@@ -813,59 +884,61 @@ class _HomePageState extends State<HomePage> {
         }
       }
 
-      print('🔍 MOVE 명령어 자동 체크 (통합 전송 지점):');
-      print('  - 1번 바스켓 차있음: $isBasket1Full');
-      print('  - 초벌 완료: $isPreFryComplete');
-      print('  - 다른 바스켓(2~6번) 중 비어있는 바스켓 있음: $hasEmptyOtherBasket');
+      debugPrint('🔍 MOVE 명령어 자동 체크 (통합 전송 지점):');
+      debugPrint('  - 1번 바스켓 차있음: $isBasket1Full');
+      debugPrint('  - 초벌 완료: $isPreFryComplete');
+      debugPrint('  - 다른 바스켓(2~6번) 중 비어있는 바스켓 있음: $hasEmptyOtherBasket');
 
       // 1번 바스켓이 차있고 초벌이 끝났고 다른 바스켓이 비어있으면 MOVE 명령어 추가 및 이동 예정 표시
       if (isBasket1Full && isPreFryComplete && hasEmptyOtherBasket) {
         final targetBasketNumber = emptyBasketIndex + 1;
         final moveCommand = 'MOVE_${targetBasketNumber - 1}';
-        
+
         // 큐에 이미 같은 MOVE 명령어가 있는지 확인 (중복 방지)
         final queueCommands = _tcpService.queueCommands;
         final alreadyInQueue = queueCommands.contains(moveCommand);
-        
+
         if (alreadyInQueue) {
-          print('⚠️  MOVE 명령어 중복 방지: 큐에 이미 "$moveCommand" 명령어가 있음');
-          print('  - 큐 내용: $queueCommands');
+          debugPrint('⚠️  MOVE 명령어 중복 방지: 큐에 이미 "$moveCommand" 명령어가 있음');
+          debugPrint('  - 큐 내용: $queueCommands');
           return;
         }
-        
-        print('═══════════════════════════════════════════════════════');
-        print('🚀 MOVE 명령어 자동 추가 (통합 전송 지점):');
-        print('  - 1번 바스켓 차있음: $isBasket1Full');
-        print('  - 초벌 완료: $isPreFryComplete');
-        print('  - 다른 바스켓 비어있음: $hasEmptyOtherBasket');
-        print('  - 목적지 바스켓 번호: $targetBasketNumber');
-        print('  - 전송할 명령어: $moveCommand');
-        print('  - RUNNING 상태: ${_tcpService.isRunning}');
-        print('  - 큐에 이미 같은 명령어 있음: $alreadyInQueue');
-        print('═══════════════════════════════════════════════════════');
-        
+
+        debugPrint('═══════════════════════════════════════════════════════');
+        debugPrint('🚀 MOVE 명령어 자동 추가 (통합 전송 지점):');
+        debugPrint('  - 1번 바스켓 차있음: $isBasket1Full');
+        debugPrint('  - 초벌 완료: $isPreFryComplete');
+        debugPrint('  - 다른 바스켓 비어있음: $hasEmptyOtherBasket');
+        debugPrint('  - 목적지 바스켓 번호: $targetBasketNumber');
+        debugPrint('  - 전송할 명령어: $moveCommand');
+        debugPrint('  - RUNNING 상태: ${_tcpService.isRunning}');
+        debugPrint('  - 큐에 이미 같은 명령어 있음: $alreadyInQueue');
+        debugPrint('═══════════════════════════════════════════════════════');
+
         // 이동 예정 상태 표시 (초벌이 끝난 시점부터)
         setState(() {
           // 1번 바스켓에 이동 예정 정보 설정
-          _basketStates[0] = _basketStates[0].copyWith(pendingMoveTo: targetBasketNumber);
+          _basketStates[0] = _basketStates[0].copyWith(
+            pendingMoveTo: targetBasketNumber,
+          );
           // 목적지 바스켓을 예약 상태로 설정
           _basketStates[emptyBasketIndex] = _basketStates[emptyBasketIndex]
               .copyWith(isWaiting: true);
         });
-        
+
         // sendMessage()에서도 중복 체크를 하므로, 여기서는 로그만 남김
         final result = await _tcpService.sendMessage(moveCommand);
         if (result) {
-          print('  ✅ MOVE 명령어 큐 추가 성공');
-          print('  ✅ 이동 예정 상태 표시: 1번 바스켓 → $targetBasketNumber번 바스켓');
+          debugPrint('  ✅ MOVE 명령어 큐 추가 성공');
+          debugPrint('  ✅ 이동 예정 상태 표시: 1번 바스켓 → $targetBasketNumber번 바스켓');
         } else {
-          print('  ❌ MOVE 명령어 큐 추가 실패 (중복 또는 기타 이유)');
+          debugPrint('  ❌ MOVE 명령어 큐 추가 실패 (중복 또는 기타 이유)');
         }
       } else {
-        print('  ⚠️  MOVE 명령어 추가 조건 불만족');
-        print('    - 1번 바스켓 차있음: $isBasket1Full');
-        print('    - 초벌 완료: $isPreFryComplete');
-        print('    - 다른 바스켓 비어있음: $hasEmptyOtherBasket');
+        debugPrint('  ⚠️  MOVE 명령어 추가 조건 불만족');
+        debugPrint('    - 1번 바스켓 차있음: $isBasket1Full');
+        debugPrint('    - 초벌 완료: $isPreFryComplete');
+        debugPrint('    - 다른 바스켓 비어있음: $hasEmptyOtherBasket');
       }
     } finally {
       // 체크 완료 후 플래그 해제 (약간의 지연을 두어 동시 호출 방지)
@@ -878,7 +951,7 @@ class _HomePageState extends State<HomePage> {
   // INPUT_END 메시지 수신 시 처리: 1번 바스켓 채우기
   void _handleInputEnd() {
     if (_manualFryerState.selectedMenu == null) {
-      print('⚠️  INPUT_END 수신했지만 수동 조리 튀김기에 메뉴가 없음');
+      debugPrint('⚠️  INPUT_END 수신했지만 수동 조리 튀김기에 메뉴가 없음');
       // 수동 조리 튀김기에 메뉴가 없어도 1번 바스켓 상태를 체크
       _checkAndAddMoveCommand();
       return;
@@ -902,9 +975,9 @@ class _HomePageState extends State<HomePage> {
       // 수동 조리 튀김기 초기화
       _manualFryerState = FryerState();
 
-      print('✅ INPUT_END 처리 완료: 1번 바스켓에 ${selectedMenu.name} 채움');
+      debugPrint('✅ INPUT_END 처리 완료: 1번 바스켓에 ${selectedMenu.name} 채움');
       if (pendingMoveTo != null) {
-        print('  → ${pendingMoveTo}번 바스켓으로 이동 예정');
+        debugPrint('  → $pendingMoveTo번 바스켓으로 이동 예정');
       }
     });
 
@@ -933,7 +1006,7 @@ class _HomePageState extends State<HomePage> {
     }
 
     return Scaffold(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFFFFFF),
       body: Column(
         children: [
           // 검은색 헤더
@@ -953,7 +1026,7 @@ class _HomePageState extends State<HomePage> {
             child: SingleChildScrollView(
               child: Column(
                 children: [
-                  const SizedBox(height: 20),
+                  SizedBox(height: 20 * scale),
 
                   // 슬롯 그리드
                   SlotGrid(scale: scale, basketStates: _basketStates),

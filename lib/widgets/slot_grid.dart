@@ -37,7 +37,7 @@ class SlotGrid extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: const Color(0xFFF5D44C),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.black, width: 1),
+                      border: Border.all(color: const Color(0xFF000000), width: 1),
                     ),
                     child: Center(
                       child: Text(
@@ -45,7 +45,7 @@ class SlotGrid extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14 * scale,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: const Color(0xFF000000),
                         ),
                       ),
                     ),
@@ -58,7 +58,7 @@ class SlotGrid extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 45 * scale,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: const Color(0xFF000000),
                 ),
               ),
             ],
@@ -81,6 +81,8 @@ class SlotGrid extends StatelessWidget {
                         slotNumber: index,
                         scale: scale,
                         basketState: basketStates[index],
+                        shouldBlink: basketStates[index].isMoving || 
+                            basketStates[index].isArrivingSoon,
                       ),
                       SizedBox(height: 10 * scale),
                       // 각 바스켓 아래 버튼들 (세로로)
@@ -95,7 +97,7 @@ class SlotGrid extends StatelessWidget {
       ),
     );
   }
-
+  
   Widget _buildBasketButtons(int basketIndex, double scale) {
     return Column(
       children: [
@@ -106,13 +108,13 @@ class SlotGrid extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFE5E5E5),
             borderRadius: BorderRadius.circular(20 * scale),
-            border: Border.all(color: Colors.black, width: 1),
+            border: Border.all(color: const Color(0xFF000000), width: 1),
           ),
           child: Material(
-            color: Colors.transparent,
+            color: const Color(0x00000000),
             child: InkWell(
               onTap: () {
-                // TODO: ${basketIndex + 1}번 바스켓 튀김기 청소 동작
+                // TODO: ${basketIndex + 1}번 바스켓 튀김기 청소 동작 구현 필요
               },
               borderRadius: BorderRadius.circular(20 * scale),
               child: Center(
@@ -121,7 +123,7 @@ class SlotGrid extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 35 * scale,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                          color: const Color(0xFF000000),
                   ),
                 ),
               ),
@@ -136,13 +138,13 @@ class SlotGrid extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFE5E5E5),
             borderRadius: BorderRadius.circular(20 * scale),
-            border: Border.all(color: Colors.black, width: 1),
+            border: Border.all(color: const Color(0xFF000000), width: 1),
           ),
           child: Material(
-            color: Colors.transparent,
+            color: const Color(0x00000000),
             child: InkWell(
               onTap: () {
-                // TODO: ${basketIndex + 1}번 바스켓 흔들기 동작
+                // TODO: ${basketIndex + 1}번 바스켓 흔들기 동작 구현 필요
               },
               borderRadius: BorderRadius.circular(20 * scale),
               child: Center(
@@ -151,7 +153,7 @@ class SlotGrid extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 35 * scale,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                          color: const Color(0xFF000000),
                   ),
                 ),
               ),
@@ -166,13 +168,13 @@ class SlotGrid extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFE5E5E5),
             borderRadius: BorderRadius.circular(20 * scale),
-            border: Border.all(color: Colors.black, width: 1),
+            border: Border.all(color: const Color(0xFF000000), width: 1),
           ),
           child: Material(
-            color: Colors.transparent,
+            color: const Color(0x00000000),
             child: InkWell(
               onTap: () {
-                // TODO: ${basketIndex + 1}번 바스켓 오버쿡 / 즉시 완료 동작
+                // TODO: ${basketIndex + 1}번 바스켓 오버쿡 / 즉시 완료 동작 구현 필요
               },
               borderRadius: BorderRadius.circular(20 * scale),
               child: Center(
@@ -181,7 +183,7 @@ class SlotGrid extends StatelessWidget {
                   style: TextStyle(
                     fontSize: 35 * scale,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                          color: const Color(0xFF000000),
                   ),
                 ),
               ),

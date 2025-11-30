@@ -15,7 +15,7 @@ class MoveConfirmationDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Dialog(
-      backgroundColor: Colors.white,
+      backgroundColor: const Color(0xFFFFFFFF),
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(20 * scale),
       ),
@@ -30,7 +30,7 @@ class MoveConfirmationDialog extends StatelessWidget {
               style: TextStyle(
                 fontSize: 50 * scale,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: const Color(0xFF000000),
               ),
             ),
             SizedBox(height: 20 * scale),
@@ -39,7 +39,7 @@ class MoveConfirmationDialog extends StatelessWidget {
               textAlign: TextAlign.center,
               style: TextStyle(
                 fontSize: 40 * scale,
-                color: Colors.black,
+                color: const Color(0xFF000000),
               ),
             ),
             SizedBox(height: 30 * scale),
@@ -53,7 +53,7 @@ class MoveConfirmationDialog extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: const Color(0xFFE5E5E5),
                       borderRadius: BorderRadius.circular(15 * scale),
-                      border: Border.all(color: Colors.black, width: 1),
+                      border: Border.all(color: const Color(0xFF000000), width: 1),
                     ),
                     child: Material(
                       color: Colors.transparent,
@@ -66,7 +66,7 @@ class MoveConfirmationDialog extends StatelessWidget {
                             style: TextStyle(
                               fontSize: 35 * scale,
                               fontWeight: FontWeight.bold,
-                              color: Colors.black,
+                              color: const Color(0xFF000000),
                             ),
                           ),
                         ),
@@ -82,7 +82,7 @@ class MoveConfirmationDialog extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: Colors.blue,
                       borderRadius: BorderRadius.circular(15 * scale),
-                      border: Border.all(color: Colors.black, width: 1),
+                      border: Border.all(color: const Color(0xFF000000), width: 1),
                     ),
                     child: Material(
                       color: Colors.transparent,

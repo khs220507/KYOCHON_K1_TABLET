@@ -1,6 +1,8 @@
 import 'dart:convert';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
 import '../config/menu_config.dart';
+import '../services/tcp_service.dart';
 
 /// 설정 파일을 로드하는 서비스
 class ConfigService {
@@ -13,7 +15,7 @@ class ConfigService {
   /// TCP 설정 로드
   static Future<TcpConfigData> loadTcpConfig() async {
     if (_tcpConfig != null) {
-      print('Using cached TCP config: ${_tcpConfig!.serverHost}:${_tcpConfig!.serverPort}');
+      debugPrint('Using cached TCP config: ${_tcpConfig!.serverHost}:${_tcpConfig!.serverPort}');
       return _tcpConfig!;
     }
 
@@ -22,13 +24,13 @@ class ConfigService {
       final Map<String, dynamic> json = jsonDecode(jsonString);
       
       _tcpConfig = TcpConfigData.fromJson(json);
-      print('TCP config loaded successfully:');
-      print('  Robot: ${_tcpConfig!.robotHost}:${_tcpConfig!.robotPort}');
-      print('  Server: ${_tcpConfig!.serverHost}:${_tcpConfig!.serverPort}');
+      debugPrint('TCP config loaded successfully:');
+      debugPrint('  Robot: ${_tcpConfig!.robotHost}:${_tcpConfig!.robotPort}');
+      debugPrint('  Server: ${_tcpConfig!.serverHost}:${_tcpConfig!.serverPort}');
       return _tcpConfig!;
     } catch (e) {
-      print('Failed to load TCP config: $e');
-      print('Using default TCP config values');
+      debugPrint('Failed to load TCP config: $e');
+      debugPrint('Using default TCP config values');
       // 기본값 반환
       _tcpConfig = TcpConfigData(
         robotHost: '0.0.0.0',
@@ -70,10 +72,20 @@ class ConfigService {
 
   /// 운영 모드 설정
   static void setOperatingMode(String mode) {
+    final oldMode = _operatingMode;
     if (mode == 'production' || mode == 'recipe') {
       _operatingMode = mode;
     } else {
       _operatingMode = 'recipe'; // 기본값
+    }
+    
+    // 운영모드가 변경되었고 이전 모드가 있었으면 큐 재정렬
+    if (oldMode != null && oldMode != _operatingMode) {
+      try {
+        TcpService.instance.reorderQueueByOperatingMode();
+      } catch (e) {
+        debugPrint('큐 재정렬 실패 (TcpService가 초기화되지 않았을 수 있음): $e');
+      }
     }
   }
 
@@ -114,7 +126,7 @@ class ConfigService {
       
       return _menuConfigs!;
     } catch (e) {
-      print('Failed to load menu config: $e');
+      debugPrint('Failed to load menu config: $e');
       // 기본값 반환
       _globalShakeTimePercent = 0.83;
       _globalOvercookTimePercent = 10.0;

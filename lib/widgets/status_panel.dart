@@ -3,6 +3,7 @@ import 'pre_fryer_card.dart';
 import 'menu_selection_dialog.dart';
 import '../config/menu_config.dart';
 import '../models/fryer_state.dart';
+import '../services/config_service.dart';
 
 class StatusPanel extends StatelessWidget {
   final double scale;
@@ -23,7 +24,10 @@ class StatusPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Container(
-      padding: EdgeInsets.symmetric(horizontal: 20 * scale, vertical: 10 * scale),
+      padding: EdgeInsets.symmetric(
+        horizontal: 20 * scale,
+        vertical: 10 * scale,
+      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -37,7 +41,7 @@ class StatusPanel extends StatelessWidget {
                 style: TextStyle(
                   fontSize: 60 * scale,
                   fontWeight: FontWeight.bold,
-                  color: Colors.black,
+                  color: const Color(0xFF000000),
                 ),
               ),
               SizedBox(height: 10 * scale),
@@ -69,17 +73,17 @@ class StatusPanel extends StatelessWidget {
                         width: 280 * scale,
                         height: 240 * scale,
                         decoration: BoxDecoration(
-                          color: (manualFryerState?.isEmpty ?? true) 
-                              ? const Color(0xFFE5E5E5) 
-                              : Colors.grey.shade400,
+                          color: (manualFryerState?.isEmpty ?? true)
+                              ? const Color(0xFFE5E5E5)
+                              : const Color(0xFFBDBDBD),
                           borderRadius: BorderRadius.circular(20 * scale),
                           border: Border.all(
-                            color: Colors.black, 
+                            color: const Color(0xFF000000),
                             width: 1,
                           ),
                         ),
                         child: Material(
-                          color: Colors.transparent,
+                          color: const Color(0x00000000),
                           child: InkWell(
                             onTap: (manualFryerState?.isEmpty ?? true)
                                 ? () {
@@ -105,7 +109,7 @@ class StatusPanel extends StatelessWidget {
                                   fontWeight: FontWeight.bold,
                                   color: (manualFryerState?.isEmpty ?? true)
                                       ? Colors.black
-                                      : Colors.grey.shade600,
+                                      : const Color(0xFF757575),
                                 ),
                               ),
                             ),
@@ -120,13 +124,16 @@ class StatusPanel extends StatelessWidget {
                         decoration: BoxDecoration(
                           color: const Color(0xFFDDDCDC),
                           borderRadius: BorderRadius.circular(20 * scale),
-                          border: Border.all(color: Colors.black, width: 1),
+                          border: Border.all(
+                            color: const Color(0xFF000000),
+                            width: 1,
+                          ),
                         ),
                         child: Material(
-                          color: Colors.transparent,
+                          color: const Color(0x00000000),
                           child: InkWell(
                             onTap: () {
-                              // TODO: 사이드 버튼 동작
+                              // TODO: 사이드 버튼 동작 구현 필요
                             },
                             borderRadius: BorderRadius.circular(20 * scale),
                             child: Center(
@@ -135,7 +142,7 @@ class StatusPanel extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 60 * scale,
                                   fontWeight: FontWeight.bold,
-                                  color: Colors.black,
+                                  color: const Color(0xFF000000),
                                 ),
                               ),
                             ),
@@ -154,26 +161,71 @@ class StatusPanel extends StatelessWidget {
             crossAxisAlignment: CrossAxisAlignment.end,
             children: [
               // 로봇 상태
-              Row(
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: [
-                  Text(
-                    '로봇 상태 : ',
-                    style: TextStyle(
-                      fontSize: 40 * scale,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black,
-                    ),
+                  Row(
+                    children: [
+                      Text(
+                        '로봇 상태 : ',
+                        style: TextStyle(
+                          fontSize: 40 * scale,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF000000),
+                        ),
+                      ),
+                      // 입체감 있는 LED 인디케이터
+                      _buildLEDIndicator(scale),
+                      SizedBox(width: 15 * scale),
+                      Text(
+                        '(스크립트 실행중)',
+                        style: TextStyle(
+                          fontSize: 40 * scale,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF00C853), // LED와 동일한 색상
+                        ),
+                      ),
+                    ],
                   ),
-                  // 입체감 있는 LED 인디케이터
-                  _buildLEDIndicator(scale),
-                  SizedBox(width: 15 * scale),
-                  Text(
-                    '(스크립트 실행중)',
-                    style: TextStyle(
-                      fontSize: 40 * scale,
-                      fontWeight: FontWeight.bold,
-                      color: const Color(0xFF00C853), // LED와 동일한 색상
-                    ),
+                  SizedBox(height: 10 * scale),
+                  // 운영모드 표시
+                  Row(
+                    children: [
+                      Text(
+                        '운영모드 : ',
+                        style: TextStyle(
+                          fontSize: 35 * scale,
+                          fontWeight: FontWeight.bold,
+                          color: const Color(0xFF000000),
+                        ),
+                      ),
+                      Container(
+                        padding: EdgeInsets.symmetric(
+                          horizontal: 15 * scale,
+                          vertical: 5 * scale,
+                        ),
+                        decoration: BoxDecoration(
+                          color: ConfigService.isProductionMode()
+                              ? const Color(0xFFFF9800) // 생산량 위주: 주황색
+                              : const Color(0xFF2196F3), // 조리시간 준수: 파란색
+                          borderRadius: BorderRadius.circular(10 * scale),
+                          border: Border.all(
+                            color: const Color(0xFF000000),
+                            width: 1,
+                          ),
+                        ),
+                        child: Text(
+                          ConfigService.isProductionMode()
+                              ? '생산량 위주'
+                              : '조리시간 준수',
+                          style: TextStyle(
+                            fontSize: 35 * scale,
+                            fontWeight: FontWeight.bold,
+                            color: const Color(0xFFFFFFFF),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ],
               ),
@@ -208,7 +260,10 @@ class StatusPanel extends StatelessWidget {
                     decoration: BoxDecoration(
                       color: const Color(0xFFF5D44C),
                       shape: BoxShape.circle,
-                      border: Border.all(color: Colors.black, width: 1),
+                      border: Border.all(
+                        color: const Color(0xFF000000),
+                        width: 1,
+                      ),
                     ),
                     child: Center(
                       child: Text(
@@ -216,7 +271,7 @@ class StatusPanel extends StatelessWidget {
                         style: TextStyle(
                           fontSize: 14 * scale,
                           fontWeight: FontWeight.bold,
-                          color: Colors.black,
+                          color: const Color(0xFF000000),
                         ),
                       ),
                     ),
@@ -229,7 +284,7 @@ class StatusPanel extends StatelessWidget {
                 decoration: BoxDecoration(
                   color: const Color(0xFFF5D44C),
                   shape: BoxShape.circle,
-                  border: Border.all(color: Colors.black, width: 1),
+                  border: Border.all(color: const Color(0xFF000000), width: 1),
                 ),
                 child: Center(
                   child: Text(
@@ -237,7 +292,7 @@ class StatusPanel extends StatelessWidget {
                     style: TextStyle(
                       fontSize: 14 * scale,
                       fontWeight: FontWeight.bold,
-                      color: Colors.black,
+                      color: const Color(0xFF000000),
                     ),
                   ),
                 ),
@@ -248,7 +303,7 @@ class StatusPanel extends StatelessWidget {
           style: TextStyle(
             fontSize: 45 * scale,
             fontWeight: FontWeight.bold,
-            color: Colors.black,
+            color: const Color(0xFF000000),
           ),
         ),
       ],
@@ -257,7 +312,7 @@ class StatusPanel extends StatelessWidget {
 
   Widget _buildLEDIndicator(double scale) {
     const Color ledColor = Color(0xFF00C853); // 녹색 LED
-    
+
     return Container(
       width: 40 * scale,
       height: 40 * scale,
@@ -266,27 +321,27 @@ class StatusPanel extends StatelessWidget {
         gradient: RadialGradient(
           colors: [
             ledColor,
-            ledColor.withOpacity(0.8),
-            ledColor.withOpacity(0.6),
+            ledColor.withValues(alpha: 0.8),
+            ledColor.withValues(alpha: 0.6),
           ],
           stops: const [0.0, 0.5, 1.0],
         ),
         boxShadow: [
           // 미묘한 발광 효과 (번짐 최소화)
           BoxShadow(
-            color: ledColor.withOpacity(0.3),
+            color: ledColor.withValues(alpha: 0.3),
             blurRadius: 4 * scale,
             spreadRadius: 1 * scale,
           ),
           // 입체감을 주는 그림자
           BoxShadow(
-            color: Colors.black.withOpacity(0.4),
+            color: const Color(0xFF000000).withValues(alpha: 0.4),
             blurRadius: 3 * scale,
             offset: Offset(0, 2 * scale),
           ),
           // 내부 그림자 효과
           BoxShadow(
-            color: Colors.black.withOpacity(0.2),
+            color: const Color(0xFF000000).withValues(alpha: 0.2),
             blurRadius: 1 * scale,
             offset: Offset(0, 1 * scale),
           ),
@@ -303,7 +358,7 @@ class StatusPanel extends StatelessWidget {
               height: 12 * scale,
               decoration: BoxDecoration(
                 shape: BoxShape.circle,
-                color: Colors.white.withOpacity(0.5),
+                color: const Color(0xFFFFFFFF).withValues(alpha: 0.5),
               ),
             ),
           ),
@@ -315,9 +370,9 @@ class StatusPanel extends StatelessWidget {
                 begin: Alignment.topLeft,
                 end: Alignment.bottomRight,
                 colors: [
-                  Colors.white.withOpacity(0.3),
-                  Colors.transparent,
-                  Colors.black.withOpacity(0.1),
+                  const Color(0xFFFFFFFF).withValues(alpha: 0.3),
+                  const Color(0x00000000),
+                  const Color(0xFF000000).withValues(alpha: 0.1),
                 ],
                 stops: const [0.0, 0.5, 1.0],
               ),
@@ -330,14 +385,14 @@ class StatusPanel extends StatelessWidget {
 
   Widget _buildCommandQueue(double scale) {
     final queue = commandQueue ?? [];
-    
+
     return Container(
-      width: 500 * scale,
+      constraints: BoxConstraints(maxWidth: 1200 * scale),
       padding: EdgeInsets.all(15 * scale),
       decoration: BoxDecoration(
-        color: Colors.white,
+        color: const Color(0xFFFFFFFF),
         borderRadius: BorderRadius.circular(15 * scale),
-        border: Border.all(color: Colors.black, width: 2),
+        border: Border.all(color: const Color(0xFF000000), width: 2),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -348,7 +403,7 @@ class StatusPanel extends StatelessWidget {
             style: TextStyle(
               fontSize: 35 * scale,
               fontWeight: FontWeight.bold,
-              color: Colors.black,
+              color: const Color(0xFF000000),
             ),
           ),
           SizedBox(height: 10 * scale),
@@ -357,53 +412,78 @@ class StatusPanel extends StatelessWidget {
               '대기 중인 명령어 없음',
               style: TextStyle(
                 fontSize: 30 * scale,
-                color: Colors.grey,
+                color: const Color(0xFF9E9E9E),
               ),
             )
           else
-            Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: queue.asMap().entries.map((entry) {
-                final index = entry.key;
-                final command = entry.value;
-                return Padding(
-                  padding: EdgeInsets.only(bottom: 5 * scale),
-                  child: Row(
-                    children: [
-                      Container(
-                        width: 40 * scale,
-                        height: 40 * scale,
-                        decoration: BoxDecoration(
-                          color: index == 0 ? Colors.orange : Colors.grey,
-                          shape: BoxShape.circle,
-                          border: Border.all(color: Colors.black, width: 1),
+            SingleChildScrollView(
+              scrollDirection: Axis.horizontal,
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: queue.asMap().entries.map((entry) {
+                  final index = entry.key;
+                  final command = entry.value;
+                  return Padding(
+                    padding: EdgeInsets.only(right: 10 * scale),
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 15 * scale,
+                        vertical: 10 * scale,
+                      ),
+                      decoration: BoxDecoration(
+                        color: index == 0
+                            ? const Color(0xFFFF9800)
+                            : const Color(0xFFE0E0E0),
+                        borderRadius: BorderRadius.circular(10 * scale),
+                        border: Border.all(
+                          color: const Color(0xFF000000),
+                          width: 1,
                         ),
-                        child: Center(
-                          child: Text(
-                            '${index + 1}',
-                            style: TextStyle(
-                              fontSize: 25 * scale,
-                              fontWeight: FontWeight.bold,
-                              color: Colors.white,
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 35 * scale,
+                            height: 35 * scale,
+                            decoration: BoxDecoration(
+                              color: index == 0
+                                  ? const Color(0xFFFFFFFF)
+                                  : const Color(0xFF9E9E9E),
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: const Color(0xFF000000),
+                                width: 1,
+                              ),
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${index + 1}',
+                                style: TextStyle(
+                                  fontSize: 22 * scale,
+                                  fontWeight: FontWeight.bold,
+                                  color: index == 0
+                                      ? const Color(0xFFFF9800)
+                                      : const Color(0xFFFFFFFF),
+                                ),
+                              ),
                             ),
                           ),
-                        ),
-                      ),
-                      SizedBox(width: 10 * scale),
-                      Expanded(
-                        child: Text(
-                          command,
-                          style: TextStyle(
-                            fontSize: 30 * scale,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.black,
+                          SizedBox(width: 10 * scale),
+                          Text(
+                            command,
+                            style: TextStyle(
+                              fontSize: 28 * scale,
+                              fontWeight: FontWeight.bold,
+                              color: const Color(0xFF000000),
+                            ),
                           ),
-                        ),
+                        ],
                       ),
-                    ],
-                  ),
-                );
-              }).toList(),
+                    ),
+                  );
+                }).toList(),
+              ),
             ),
         ],
       ),
@@ -431,7 +511,10 @@ class StatusPanel extends StatelessWidget {
                   decoration: BoxDecoration(
                     color: const Color(0xFFF5D44C),
                     shape: BoxShape.circle,
-                    border: Border.all(color: Colors.black, width: 1),
+                    border: Border.all(
+                      color: const Color(0xFF000000),
+                      width: 1,
+                    ),
                   ),
                 );
               },
@@ -442,7 +525,7 @@ class StatusPanel extends StatelessWidget {
               style: TextStyle(
                 fontSize: 45 * scale,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: const Color(0xFF000000),
               ),
             ),
           ],
@@ -455,7 +538,7 @@ class StatusPanel extends StatelessWidget {
           decoration: BoxDecoration(
             color: const Color(0xFFE5E5E5),
             borderRadius: BorderRadius.circular(20 * scale),
-            border: Border.all(color: Colors.black, width: 1),
+            border: Border.all(color: const Color(0xFF000000), width: 1),
           ),
           padding: EdgeInsets.all(15 * scale),
           child: Center(
@@ -464,7 +547,7 @@ class StatusPanel extends StatelessWidget {
               style: TextStyle(
                 fontSize: 40 * scale,
                 fontWeight: FontWeight.bold,
-                color: Colors.black,
+                color: const Color(0xFF000000),
               ),
             ),
           ),
@@ -473,4 +556,3 @@ class StatusPanel extends StatelessWidget {
     );
   }
 }
-
